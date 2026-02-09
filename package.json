@@ -13,6 +13,8 @@
     "webhook": "node stripe-webhook-server.js"
   },
   "dependencies": {
+    "@libsql/client": "^0.17.0",
+    "@prisma/adapter-libsql": "^7.3.0",
     "@prisma/client": "^6.18.0",
     "@react-three/drei": "^10.7.6",
     "@react-three/fiber": "^9.3.0",
@@ -38,7 +40,6 @@
     "react-icons": "^5.5.0",
     "recharts": "^3.2.1",
     "speakeasy": "^2.0.0",
-    "sqlite3": "^5.0.2",
     "stripe": "^19.3.1",
     "three": "^0.180.0",
     "web-push": "^3.6.7",

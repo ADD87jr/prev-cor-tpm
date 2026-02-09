@@ -1,0 +1,15 @@
+﻿node.exe : Vercel CLI 50.13.2
+At C:\Users\Dan\AppData\Roaming\npm\vercel.ps
+1:24 char:5
++     & "node$exe"  
+"$basedir/node_modules/vercel/dist/vc.js" 
+$args
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified:  
+   (Vercel CLI 50.13.2:String) [], RemoteEx  
+  ception
+    + FullyQualifiedErrorId : NativeCommandE 
+   rror
+ 
+Error: unknown or unexpected option: --all
