@@ -1,12 +1,11 @@
 import { NextRequest } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import { generateOrderConfirmationPdfBuffer } from "@/app/utils/orderConfirmationPdf";
 import { generateInvoiceNumber } from "@/app/utils/invoiceNumber";
 import { COMPANY_CONFIG } from "@/lib/companyConfig";
 
 export async function POST(req: NextRequest) {
   try {
-    const prisma = new PrismaClient();
     const body = await req.json();
     const { orderId } = body;
     if (!orderId) return new Response(JSON.stringify({ error: "orderId missing" }), { status: 400 });

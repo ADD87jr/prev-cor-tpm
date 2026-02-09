@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import { execSync } from "child_process";
-
-const prisma = new PrismaClient();
 
 export async function POST(req: NextRequest) {
   // Protecție simplă: verifică header secret
