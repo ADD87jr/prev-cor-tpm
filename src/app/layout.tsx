@@ -30,7 +30,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL("https://prevcortpm.ro"),
   title: "PREV-COR TPM | Soluții Inteligente de Automatizare Industrială & Magazin Online",
-  description: "Soluții inteligente de automatizare industrială. Magazin online cu echipamente electrice, protecții, automatizări. Proiectare, instalare și mentenanță sisteme electrice. Livrare rapidă în toată România.",
+  description: "PREV-COR TPM oferă soluții complete de automatizare industrială: consultanță, proiectare, instalare și mentenanță. Magazin online cu livrare rapidă în toată România.",
   keywords: ["automatizare industrială", "soluții inteligente", "echipamente electrice", "protecții electrice", "PREV-COR TPM"],
   authors: [{ name: "PREV-COR TPM" }],
   creator: "PREV-COR TPM",
@@ -47,7 +47,7 @@ export const metadata: Metadata = {
     url: "https://prevcortpm.ro",
     siteName: "PREV-COR TPM",
     title: "PREV-COR TPM | Soluții Inteligente de Automatizare Industrială & Magazin Online",
-    description: "Soluții inteligente de automatizare industrială. Magazin online cu echipamente electrice și protecții. Livrare rapidă în toată România.",
+    description: "PREV-COR TPM oferă soluții complete de automatizare industrială: consultanță, proiectare, instalare și mentenanță. Magazin online cu livrare rapidă în toată România.",
     images: [{ url: "/logo.png", width: 200, height: 200, alt: "PREV-COR TPM Logo" }],
   },
   twitter: {
@@ -55,7 +55,7 @@ export const metadata: Metadata = {
     site: "@prevcortpm",
     creator: "@prevcortpm",
     title: "PREV-COR TPM | Soluții Inteligente de Automatizare Industrială",
-    description: "Soluții inteligente de automatizare industrială. Magazin online cu echipamente electrice.",
+    description: "PREV-COR TPM oferă soluții complete de automatizare industrială: consultanță, proiectare, instalare și mentenanță. Magazin online cu livrare rapidă.",
     images: ["/logo.png"],
   },
   alternates: {
