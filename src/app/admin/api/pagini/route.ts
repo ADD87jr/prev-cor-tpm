@@ -1,13 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
+import { prisma } from "@/lib/prisma";
 import { COMPANY_CONFIG } from "@/lib/companyConfig";
 import { adminAuthMiddleware } from "@/lib/auth-middleware";
 
-const DATA_FILE = path.join(process.cwd(), "data", "pagini.json");
-
 // Structura implicită pentru paginile site-ului
-const defaultData = {
+const defaultData: Record<string, any> = {
   acasa: {
     titlu: "Bine ați venit la PREV-COR TPM",
     subtitlu: "Soluții complete pentru instalații electrice și automatizări industriale",
@@ -52,25 +49,37 @@ const defaultData = {
   },
 };
 
-function ensureDataFile() {
-  const dataDir = path.dirname(DATA_FILE);
-  if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true });
+const PAGES_KEY = "site_pages";
+
+async function readData(): Promise<Record<string, any>> {
+  try {
+    const setting = await prisma.siteSettings.findUnique({
+      where: { key: PAGES_KEY }
+    });
+    
+    if (setting?.value) {
+      return JSON.parse(setting.value);
+    }
+  } catch (error) {
+    console.error("Error reading pages from DB:", error);
   }
-  if (!fs.existsSync(DATA_FILE)) {
-    fs.writeFileSync(DATA_FILE, JSON.stringify(defaultData, null, 2), "utf-8");
-  }
+  
+  // Return default data if not found
+  return { ...defaultData };
 }
 
-function readData() {
-  ensureDataFile();
-  const raw = fs.readFileSync(DATA_FILE, "utf-8");
-  return JSON.parse(raw);
-}
-
-function writeData(data: any) {
-  ensureDataFile();
-  fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), "utf-8");
+async function writeData(data: Record<string, any>): Promise<void> {
+  await prisma.siteSettings.upsert({
+    where: { key: PAGES_KEY },
+    update: { 
+      value: JSON.stringify(data),
+      updatedAt: new Date()
+    },
+    create: {
+      key: PAGES_KEY,
+      value: JSON.stringify(data)
+    }
+  });
 }
 
 export async function GET(req: NextRequest) {
@@ -80,7 +89,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const pagina = searchParams.get("pagina");
     
-    const data = readData();
+    const data = await readData();
     
     if (pagina && data[pagina]) {
       return NextResponse.json(data[pagina]);
@@ -104,9 +113,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Pagina și datele sunt obligatorii" }, { status: 400 });
     }
     
-    const data = readData();
+    const data = await readData();
     data[pagina] = date;
-    writeData(data);
+    await writeData(data);
     
     return NextResponse.json({ success: true, message: "Date salvate cu succes" });
   } catch (error) {
