@@ -29,9 +29,9 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://prevcortpm.ro"),
-  title: "PREV-COR TPM | Echipamente electrice și automatizări industriale",
-  description: "Magazin online cu echipamente electrice, protecții, automatizări industriale. Proiectare, instalare și mentenanță sisteme electrice. Livrare rapidă în toată România.",
-  keywords: ["echipamente electrice", "automatizări industriale", "protecții electrice", "instalații electrice", "PREV-COR TPM"],
+  title: "PREV-COR TPM | Soluții Inteligente de Automatizare Industrială & Magazin Online",
+  description: "Soluții inteligente de automatizare industrială. Magazin online cu echipamente electrice, protecții, automatizări. Proiectare, instalare și mentenanță sisteme electrice. Livrare rapidă în toată România.",
+  keywords: ["automatizare industrială", "soluții inteligente", "echipamente electrice", "protecții electrice", "PREV-COR TPM"],
   authors: [{ name: "PREV-COR TPM" }],
   creator: "PREV-COR TPM",
   publisher: "PREV-COR TPM",
@@ -46,16 +46,16 @@ export const metadata: Metadata = {
     locale: "ro_RO",
     url: "https://prevcortpm.ro",
     siteName: "PREV-COR TPM",
-    title: "PREV-COR TPM | Echipamente electrice și automatizări industriale",
-    description: "Magazin online cu echipamente electrice, protecții, automatizări industriale. Livrare rapidă în toată România.",
+    title: "PREV-COR TPM | Soluții Inteligente de Automatizare Industrială & Magazin Online",
+    description: "Soluții inteligente de automatizare industrială. Magazin online cu echipamente electrice și protecții. Livrare rapidă în toată România.",
     images: [{ url: "/logo.png", width: 200, height: 200, alt: "PREV-COR TPM Logo" }],
   },
   twitter: {
     card: "summary_large_image",
     site: "@prevcortpm",
     creator: "@prevcortpm",
-    title: "PREV-COR TPM | Echipamente electrice",
-    description: "Magazin online cu echipamente electrice și automatizări industriale.",
+    title: "PREV-COR TPM | Soluții Inteligente de Automatizare Industrială",
+    description: "Soluții inteligente de automatizare industrială. Magazin online cu echipamente electrice.",
     images: ["/logo.png"],
   },
   alternates: {
