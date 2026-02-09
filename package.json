@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@libsql/client": "^0.17.0",
-    "@prisma/adapter-libsql": "^7.3.0",
+    "@prisma/adapter-libsql": "^6.19.0",
     "@prisma/client": "^6.18.0",
     "@react-three/drei": "^10.7.6",
     "@react-three/fiber": "^9.3.0",
