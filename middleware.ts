@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 // Maintenance mode - set to true to enable
 const MAINTENANCE_MODE = false;
 
+export const runtime = 'edge';
+
 export function middleware(request: NextRequest) {
   // Skip if maintenance mode is disabled
   if (!MAINTENANCE_MODE) {
