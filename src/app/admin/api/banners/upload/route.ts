@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { promises as fs } from "fs";
-import path from "path";
+import { put } from "@vercel/blob";
 import { adminAuthMiddleware } from "@/lib/auth-middleware";
 
 export const runtime = "nodejs";
@@ -41,15 +40,15 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
     // Nume banner: promoX.jpg (sau păstrează numele original)
     const filename = formData.get("filename") as string || file.name || `banner_${Date.now()}.jpg`;
-    const bannersDir = path.join(process.cwd(), "public", "banners");
-    await fs.mkdir(bannersDir, { recursive: true });
-    const filePath = path.join(bannersDir, filename);
-    await fs.writeFile(filePath, buffer);
-    return NextResponse.json({ success: true, path: `/banners/${filename}`, filename });
+    
+    // Upload to Vercel Blob
+    const blob = await put(`banners/${filename}`, file, {
+      access: "public",
+    });
+    
+    return NextResponse.json({ success: true, path: blob.url, filename });
   } catch (err) {
     return NextResponse.json({ error: (err as Error).message }, { status: 500 });
   }

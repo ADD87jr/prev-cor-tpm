@@ -1,6 +1,5 @@
-// Bază de date persistentă pentru recenzii produse (salvată în fișier JSON)
-import fs from 'fs';
-import path from 'path';
+// Bază de date persistentă pentru recenzii produse (salvată în baza de date Turso)
+import { prisma } from '@/lib/prisma';
 
 export type Review = {
   id: number;
@@ -13,21 +12,13 @@ export type Review = {
   approved: boolean; // Pentru moderare
 };
 
-const REVIEWS_FILE = path.join(process.cwd(), 'data', 'reviews.json');
+const REVIEWS_KEY = 'reviews_data';
 
-function ensureDataDir() {
-  const dataDir = path.join(process.cwd(), 'data');
-  if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true });
-  }
-}
-
-function loadReviews(): Review[] {
-  ensureDataDir();
+async function loadReviews(): Promise<Review[]> {
   try {
-    if (fs.existsSync(REVIEWS_FILE)) {
-      const data = fs.readFileSync(REVIEWS_FILE, 'utf-8');
-      return JSON.parse(data);
+    const setting = await prisma.siteSettings.findUnique({ where: { key: REVIEWS_KEY } });
+    if (setting?.value) {
+      return JSON.parse(setting.value);
     }
   } catch (err) {
     console.error('Eroare la încărcare recenzii:', err);
@@ -35,13 +26,16 @@ function loadReviews(): Review[] {
   return [];
 }
 
-function saveReviews(reviews: Review[]) {
-  ensureDataDir();
-  fs.writeFileSync(REVIEWS_FILE, JSON.stringify(reviews, null, 2), 'utf-8');
+async function saveReviews(reviews: Review[]) {
+  await prisma.siteSettings.upsert({
+    where: { key: REVIEWS_KEY },
+    update: { value: JSON.stringify(reviews), updatedAt: new Date() },
+    create: { key: REVIEWS_KEY, value: JSON.stringify(reviews) }
+  });
 }
 
-export function addReview(review: Omit<Review, 'id' | 'date' | 'approved'>) {
-  const reviews = loadReviews();
+export async function addReview(review: Omit<Review, 'id' | 'date' | 'approved'>) {
+  const reviews = await loadReviews();
   const newReview: Review = { 
     ...review, 
     id: Date.now(),
@@ -49,32 +43,32 @@ export function addReview(review: Omit<Review, 'id' | 'date' | 'approved'>) {
     approved: true // Auto-aprobat (poți schimba la false pentru moderare)
   };
   reviews.push(newReview);
-  saveReviews(reviews);
+  await saveReviews(reviews);
   return newReview;
 }
 
-export function getReviews(productId: number) {
-  const reviews = loadReviews();
+export async function getReviews(productId: number) {
+  const reviews = await loadReviews();
   return reviews.filter(r => r.productId === productId && r.approved);
 }
 
-export function getAllReviews() {
+export async function getAllReviews() {
   return loadReviews();
 }
 
-export function deleteReview(id: number) {
-  const reviews = loadReviews();
+export async function deleteReview(id: number) {
+  const reviews = await loadReviews();
   const filtered = reviews.filter(r => r.id !== id);
-  saveReviews(filtered);
+  await saveReviews(filtered);
   return filtered;
 }
 
-export function toggleApproval(id: number) {
-  const reviews = loadReviews();
+export async function toggleApproval(id: number) {
+  const reviews = await loadReviews();
   const review = reviews.find(r => r.id === id);
   if (review) {
     review.approved = !review.approved;
-    saveReviews(reviews);
+    await saveReviews(reviews);
   }
   return reviews;
 }

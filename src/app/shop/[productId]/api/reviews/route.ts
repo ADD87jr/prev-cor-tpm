@@ -5,7 +5,7 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const productId = Number(searchParams.get("productId"));
   if (!productId) return NextResponse.json([]);
-  return NextResponse.json(getReviews(productId));
+  return NextResponse.json(await getReviews(productId));
 }
 
 export async function POST(req: NextRequest) {
@@ -13,6 +13,6 @@ export async function POST(req: NextRequest) {
   if (!productId || !user || !rating || !text) {
     return NextResponse.json({ error: "Date lipsă" }, { status: 400 });
   }
-  const review = addReview({ productId, user, rating, text });
+  const review = await addReview({ productId, user, rating, text });
   return NextResponse.json(review);
 }

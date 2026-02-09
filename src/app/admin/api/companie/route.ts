@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
+import { prisma } from "@/lib/prisma";
 import { adminAuthMiddleware } from "@/lib/auth-middleware";
 
-const DATA_FILE = path.join(process.cwd(), "data", "companie.json");
+const COMPANY_KEY = "company_data";
 
 // Structura implicită pentru datele companiei
 const defaultData = {
@@ -28,22 +27,39 @@ const defaultData = {
   bankEn: "ROMANIAN DEVELOPMENT BANK (BRD)",
 };
 
-function ensureDataFile() {
-  const dataDir = path.dirname(DATA_FILE);
-  if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true });
+async function loadCompanyData() {
+  try {
+    const setting = await prisma.siteSettings.findUnique({
+      where: { key: COMPANY_KEY }
+    });
+    if (setting?.value) {
+      return JSON.parse(setting.value);
+    }
+  } catch (error) {
+    console.error("Error loading company data:", error);
   }
-  if (!fs.existsSync(DATA_FILE)) {
-    fs.writeFileSync(DATA_FILE, JSON.stringify(defaultData, null, 2), "utf-8");
-  }
+  return { ...defaultData };
+}
+
+async function saveCompanyData(data: any) {
+  await prisma.siteSettings.upsert({
+    where: { key: COMPANY_KEY },
+    update: { 
+      value: JSON.stringify(data),
+      updatedAt: new Date()
+    },
+    create: {
+      key: COMPANY_KEY,
+      value: JSON.stringify(data)
+    }
+  });
 }
 
 export async function GET(req: NextRequest) {
   const authError = await adminAuthMiddleware(req);
   if (authError) return authError;
-  ensureDataFile();
   try {
-    const data = JSON.parse(fs.readFileSync(DATA_FILE, "utf-8"));
+    const data = await loadCompanyData();
     return NextResponse.json(data);
   } catch (error) {
     return NextResponse.json(defaultData);
@@ -53,7 +69,6 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const authError = await adminAuthMiddleware(req);
   if (authError) return authError;
-  ensureDataFile();
   try {
     const body = await req.json();
     
@@ -70,7 +85,7 @@ export async function POST(req: NextRequest) {
     body.whatsapp = `https://wa.me/${phoneClean}`;
     
     // Salvează datele
-    fs.writeFileSync(DATA_FILE, JSON.stringify(body, null, 2), "utf-8");
+    await saveCompanyData(body);
     
     return NextResponse.json({ success: true, data: body });
   } catch (error) {

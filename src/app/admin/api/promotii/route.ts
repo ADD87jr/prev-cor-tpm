@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import fs from "fs/promises";
-import path from "path";
+import { prisma } from "@/lib/prisma";
 import { adminAuthMiddleware } from "@/lib/auth-middleware";
 
-const PROMOS_FILE = path.join(process.cwd(), "data", "promotii.json");
+const PROMOS_KEY = "promotii_data";
 
 const defaultPromos = [
   {
@@ -26,29 +25,24 @@ const defaultPromos = [
   },
 ];
 
-async function ensureDataDir() {
-  const dataDir = path.join(process.cwd(), "data");
-  try {
-    await fs.mkdir(dataDir, { recursive: true });
-  } catch (err) {
-    // ignore if exists
-  }
-}
-
 async function loadPromos() {
-  await ensureDataDir();
   try {
-    const data = await fs.readFile(PROMOS_FILE, "utf-8");
-    return JSON.parse(data);
+    const setting = await prisma.siteSettings.findUnique({ where: { key: PROMOS_KEY } });
+    if (setting?.value) {
+      return JSON.parse(setting.value);
+    }
   } catch (err) {
-    // File doesn't exist, return defaults
-    return defaultPromos;
+    console.error("Error loading promos:", err);
   }
+  return defaultPromos;
 }
 
 async function savePromos(promos: any[]) {
-  await ensureDataDir();
-  await fs.writeFile(PROMOS_FILE, JSON.stringify(promos, null, 2), "utf-8");
+  await prisma.siteSettings.upsert({
+    where: { key: PROMOS_KEY },
+    update: { value: JSON.stringify(promos), updatedAt: new Date() },
+    create: { key: PROMOS_KEY, value: JSON.stringify(promos) }
+  });
 }
 
 export async function GET(req: NextRequest) {

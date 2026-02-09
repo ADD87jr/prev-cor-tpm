@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import path from "path";
-import fs from "fs";
+import { put } from "@vercel/blob";
 
 export const runtime = "nodejs";
 
@@ -10,10 +9,20 @@ export async function POST(req: NextRequest) {
   if (!file) {
     return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
   }
-  const buffer = Buffer.from(await file.arrayBuffer());
-  const ext = path.extname(file.name) || ".jpg";
-  const fileName = `${Date.now()}_${Math.random().toString(36).slice(2)}${ext}`;
-  const uploadPath = path.join(process.cwd(), "public", "uploads", fileName);
-  fs.writeFileSync(uploadPath, buffer);
-  return NextResponse.json({ url: `/uploads/${fileName}` });
+  
+  // Generate unique filename
+  const ext = file.name.split('.').pop() || "jpg";
+  const fileName = `${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+  
+  try {
+    // Upload to Vercel Blob
+    const blob = await put(`uploads/${fileName}`, file, {
+      access: "public",
+    });
+    
+    return NextResponse.json({ url: blob.url });
+  } catch (error) {
+    console.error("Upload error:", error);
+    return NextResponse.json({ error: "Upload failed" }, { status: 500 });
+  }
 }

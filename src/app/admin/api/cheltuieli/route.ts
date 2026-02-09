@@ -1,49 +1,53 @@
 import { NextRequest, NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
+import { prisma } from "@/lib/prisma";
 import { adminAuthMiddleware } from "@/lib/auth-middleware";
 
-const CHELTUIELI_FILE = path.join(process.cwd(), "data", "cheltuieli.json");
-const PROIECTE_FILE = path.join(process.cwd(), "data", "proiecte.json");
-const CATEGORII_FILE = path.join(process.cwd(), "data", "categorii.json");
+const CHELTUIELI_KEY = "cheltuieli_data";
+const PROIECTE_KEY = "proiecte_data";
+const CATEGORII_KEY = "categorii_data";
 
-function loadCheltuieli() {
+async function loadData(key: string, defaultValue: any[] = []) {
   try {
-    if (fs.existsSync(CHELTUIELI_FILE)) {
-      return JSON.parse(fs.readFileSync(CHELTUIELI_FILE, "utf-8"));
+    const setting = await prisma.siteSettings.findUnique({ where: { key } });
+    if (setting?.value) {
+      return JSON.parse(setting.value);
     }
-  } catch (err) {}
-  return [];
+  } catch (error) {
+    console.error(`Error loading ${key}:`, error);
+  }
+  return defaultValue;
 }
 
-function saveCheltuieli(data: any[]) {
-  fs.writeFileSync(CHELTUIELI_FILE, JSON.stringify(data, null, 2), "utf-8");
+async function saveData(key: string, data: any[]) {
+  await prisma.siteSettings.upsert({
+    where: { key },
+    update: { value: JSON.stringify(data), updatedAt: new Date() },
+    create: { key, value: JSON.stringify(data) }
+  });
 }
 
-function loadProiecte() {
-  try {
-    if (fs.existsSync(PROIECTE_FILE)) {
-      return JSON.parse(fs.readFileSync(PROIECTE_FILE, "utf-8"));
-    }
-  } catch (err) {}
-  return [{ id: 1, name: "Proiect General" }];
+async function loadCheltuieli() {
+  return loadData(CHELTUIELI_KEY, []);
 }
 
-function saveProiecte(data: any[]) {
-  fs.writeFileSync(PROIECTE_FILE, JSON.stringify(data, null, 2), "utf-8");
+async function saveCheltuieli(data: any[]) {
+  await saveData(CHELTUIELI_KEY, data);
 }
 
-function loadCategorii() {
-  try {
-    if (fs.existsSync(CATEGORII_FILE)) {
-      return JSON.parse(fs.readFileSync(CATEGORII_FILE, "utf-8"));
-    }
-  } catch (err) {}
-  return [{ id: 1, name: "Diverse" }];
+async function loadProiecte() {
+  return loadData(PROIECTE_KEY, [{ id: 1, name: "Proiect General" }]);
 }
 
-function saveCategorii(data: any[]) {
-  fs.writeFileSync(CATEGORII_FILE, JSON.stringify(data, null, 2), "utf-8");
+async function saveProiecte(data: any[]) {
+  await saveData(PROIECTE_KEY, data);
+}
+
+async function loadCategorii() {
+  return loadData(CATEGORII_KEY, [{ id: 1, name: "Diverse" }]);
+}
+
+async function saveCategorii(data: any[]) {
+  await saveData(CATEGORII_KEY, data);
 }
 
 export async function GET(req: NextRequest) {
@@ -55,14 +59,14 @@ export async function GET(req: NextRequest) {
   const type = searchParams.get("type");
   
   if (type === "proiecte") {
-    return NextResponse.json(loadProiecte());
+    return NextResponse.json(await loadProiecte());
   }
   
   if (type === "categorii") {
-    return NextResponse.json(loadCategorii());
+    return NextResponse.json(await loadCategorii());
   }
   
-  return NextResponse.json(loadCheltuieli());
+  return NextResponse.json(await loadCheltuieli());
 }
 
 export async function POST(req: NextRequest) {
@@ -75,7 +79,7 @@ export async function POST(req: NextRequest) {
   
   // Gestionare proiecte
   if (type === "proiecte") {
-    const proiecte = loadProiecte();
+    const proiecte = await loadProiecte();
     
     if (action === "add") {
       const maxId = proiecte.reduce((max: number, p: any) => Math.max(max, p.id || 0), 0);
@@ -84,7 +88,7 @@ export async function POST(req: NextRequest) {
         name: body.name,
       };
       proiecte.push(newProiect);
-      saveProiecte(proiecte);
+      await saveProiecte(proiecte);
       return NextResponse.json({ success: true, data: proiecte });
     }
     
@@ -92,14 +96,14 @@ export async function POST(req: NextRequest) {
       const idx = proiecte.findIndex((p: any) => p.id === body.id);
       if (idx !== -1) {
         proiecte[idx].name = body.name;
-        saveProiecte(proiecte);
+        await saveProiecte(proiecte);
       }
       return NextResponse.json({ success: true, data: proiecte });
     }
     
     if (action === "delete") {
       const filtered = proiecte.filter((p: any) => p.id !== body.id);
-      saveProiecte(filtered);
+      await saveProiecte(filtered);
       return NextResponse.json({ success: true, data: filtered });
     }
     
@@ -108,7 +112,7 @@ export async function POST(req: NextRequest) {
   
   // Gestionare categorii
   if (type === "categorii") {
-    const categorii = loadCategorii();
+    const categorii = await loadCategorii();
     
     if (action === "add") {
       const maxId = categorii.reduce((max: number, c: any) => Math.max(max, c.id || 0), 0);
@@ -117,7 +121,7 @@ export async function POST(req: NextRequest) {
         name: body.name,
       };
       categorii.push(newCategorie);
-      saveCategorii(categorii);
+      await saveCategorii(categorii);
       return NextResponse.json({ success: true, data: categorii });
     }
     
@@ -125,14 +129,14 @@ export async function POST(req: NextRequest) {
       const idx = categorii.findIndex((c: any) => c.id === body.id);
       if (idx !== -1) {
         categorii[idx].name = body.name;
-        saveCategorii(categorii);
+        await saveCategorii(categorii);
       }
       return NextResponse.json({ success: true, data: categorii });
     }
     
     if (action === "delete") {
       const filtered = categorii.filter((c: any) => c.id !== body.id);
-      saveCategorii(filtered);
+      await saveCategorii(filtered);
       return NextResponse.json({ success: true, data: filtered });
     }
     
@@ -140,7 +144,7 @@ export async function POST(req: NextRequest) {
   }
   
   // Gestionare cheltuieli
-  const cheltuieli = loadCheltuieli();
+  const cheltuieli = await loadCheltuieli();
   
   if (action === "add") {
     const maxId = cheltuieli.reduce((max: number, c: any) => Math.max(max, c.id || 0), 0);
@@ -153,7 +157,7 @@ export async function POST(req: NextRequest) {
       proiect: body.proiect || "Proiect General",
     };
     cheltuieli.push(newCheltuiala);
-    saveCheltuieli(cheltuieli);
+    await saveCheltuieli(cheltuieli);
     return NextResponse.json({ success: true, cheltuieli });
   }
   
@@ -161,14 +165,14 @@ export async function POST(req: NextRequest) {
     const idx = cheltuieli.findIndex((c: any) => c.id === body.id);
     if (idx !== -1) {
       cheltuieli[idx] = { ...cheltuieli[idx], ...body };
-      saveCheltuieli(cheltuieli);
+      await saveCheltuieli(cheltuieli);
     }
     return NextResponse.json({ success: true, cheltuieli });
   }
   
   if (action === "delete") {
     const filtered = cheltuieli.filter((c: any) => c.id !== body.id);
-    saveCheltuieli(filtered);
+    await saveCheltuieli(filtered);
     return NextResponse.json({ success: true, cheltuieli: filtered });
   }
   

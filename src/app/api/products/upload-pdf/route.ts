@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import path from 'path';
-import fs from 'fs/promises';
+import { put } from '@vercel/blob';
 
 export const runtime = 'nodejs';
 
@@ -24,16 +23,17 @@ export async function POST(req: NextRequest) {
   }
 
   // Validare extensie (double check)
-  const ext = path.extname(file.name).toLowerCase();
-  if (ext !== '.pdf') {
+  const ext = file.name.split('.').pop()?.toLowerCase();
+  if (ext !== 'pdf') {
     return NextResponse.json({ error: 'Extensia fișierului trebuie să fie .pdf' }, { status: 400 });
   }
 
-  const buffer = Buffer.from(await file.arrayBuffer());
   const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
-  const uploadDir = path.join(process.cwd(), 'public', 'uploads');
-  const filePath = path.join(uploadDir, fileName);
-  await fs.writeFile(filePath, buffer);
-  const url = `/uploads/${fileName}`;
-  return NextResponse.json({ url });
+  
+  // Upload to Vercel Blob
+  const blob = await put(`uploads/${fileName}`, file, {
+    access: 'public',
+  });
+  
+  return NextResponse.json({ url: blob.url });
 }
