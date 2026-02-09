@@ -1,0 +1,221 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Product {
+  id            Int      @id @default(autoincrement())
+  name          String
+  nameEn        String?  // denumire în engleză
+  price         Float
+  listPrice     Float?   // preț de listă (fără discount)
+  purchasePrice Float?   // preț de intrare
+  manufacturer  String?  // producător
+  description   String
+  descriptionEn String?  // descriere în engleză
+  image         String
+  images        Json?    // galerie imagini - array de URL-uri
+  type          String
+  domain        String
+  stock         Int
+  onDemand      Boolean  @default(false) // produs disponibil doar la comandă
+  sku           String?  // cod produs
+  brand         String?  // brand
+  variants      Json?    // variante produs [{name, value, stock, priceAdjust}]
+  // ...câmpuri eliminate: dimensions, weight
+  deliveryTime   String?  // termen de livrare estimat (ex: "2-3 zile")
+  deliveryTimeEn String?  // delivery time in English (e.g., "2-3 days")
+  specs          Json?    // specificații tehnice (array de stringuri)
+  specsEn        Json?    // specs in English (array of strings)
+  advantages     Json?    // avantaje (array de stringuri)
+  advantagesEn   Json?    // advantages in English (array of strings)
+  couponCode    String?   // cod cupon asociat
+  discount      Float?    // valoare reducere (procent sau sumă)
+  discountType  String?  // tip reducere: percent/fixed
+  pdfUrl        String?  // calea către fișa tehnică PDF
+  pdfUrlEn      String?  // calea către fișa tehnică PDF (engleză)
+  safetySheetUrl String? // calea către fișa de securitate (SDS/MSDS)
+  safetySheetUrlEn String? // calea către fișa de securitate (engleză)
+  orders        Order[]
+  productVariants ProductVariant[]
+}
+
+model ProductVariant {
+  id            Int     @id @default(autoincrement())
+  productId     Int
+  code          String  // cod variantă (ex: SKU variantă)
+  compatibil    String? // compatibilitate
+  compatibilEn  String? // compatibilitate - traducere engleză
+  greutate      Float?  // greutate (în kg)
+  stoc          Int     @default(0) // stoc variantă
+  pret          Float?  // preț variantă (dacă diferit de produs)
+  modAmbalare   String? // mod de ambalare (ex: buc, set, palet)
+  modAmbalareEn String? // mod de ambalare - traducere engleză
+  descriere     String? // descriere variantă
+  descriereEn   String? // descriere variantă - traducere engleză
+  active        Boolean @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  product       Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id       Int     @id @default(autoincrement())
+  email    String  @unique
+  password String
+  name     String
+  blocked  Boolean @default(false)
+  isAdmin  Boolean @default(false)
+  orders   Order[]
+}
+
+model Order {
+  id        Int      @id @default(autoincrement())
+  number    String?
+  date      DateTime @default(now())
+  total     Float
+  user      User?    @relation(fields: [userId], references: [id])
+  userId    Int?
+  items     Json
+  clientData Json?
+  product   Product? @relation(fields: [productId], references: [id])
+  productId Int?
+  invoiceUrl String?
+  courierCost   Float?
+  courierType   String?
+  tva           Float?
+  subtotalPretVanzare   Float?
+  subtotalDupaReduceri  Float?
+  reducereTotala        Float?
+  deliveryType  String?
+  deliveryLabel String?
+  status      String   @default("pending")
+  source      String?
+  statusUpdatedAt DateTime? @default(now())
+  paymentMethod String?
+  awb         String?
+  courierName String?
+}
+
+
+model Wishlist {
+  id     Int    @id @default(autoincrement())
+  email  String @unique
+  items  Json   // [{id, name, image}]
+}
+
+model Newsletter {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
+  name         String?
+  subscribedAt DateTime @default(now())
+  active       Boolean  @default(true)
+  source       String?  // de unde s-a abonat: footer, popup, checkout
+}
+
+model PushSubscription {
+  id           Int      @id @default(autoincrement())
+  endpoint     String   @unique
+  p256dh       String   // cheie publică
+  auth         String   // secret
+  createdAt    DateTime @default(now())
+  userAgent    String?  // browser info
+  isAdmin      Boolean  @default(true) // doar admin primeste notificări
+}
+
+model AdminLog {
+  id          Int      @id @default(autoincrement())
+  action      String   // CREATE, UPDATE, DELETE, LOGIN, etc.
+  entity      String   // produs, comanda, user, etc.
+  entityId    Int?     // id-ul entității afectate
+  details     Json?    // detalii suplimentare (ce s-a modificat)
+  adminEmail  String   // cine a făcut acțiunea
+  createdAt   DateTime @default(now())
+}
+
+model Review {
+  id          Int      @id @default(autoincrement())
+  productId   Int
+  userName    String
+  rating      Int      // 1-5 stele
+  text        String
+  textEn      String?  // traducere în engleză
+  approved    Boolean  @default(false) // moderare
+  createdAt   DateTime @default(now())
+}
+
+model Invoice {
+  id          Int      @id @default(autoincrement())
+  series      String   // ex: "FG"
+  number      Int      // număr secvențial
+  orderId     Int      @unique
+  createdAt   DateTime @default(now())
+}
+
+model SiteSettings {
+  id              Int      @id @default(autoincrement())
+  key             String   @unique
+  value           String
+  updatedAt       DateTime @default(now())
+}
+
+model BlogPost {
+  id          Int      @id @default(autoincrement())
+  title       String
+  slug        String   @unique
+  content     String   // HTML content
+  excerpt     String?  // rezumat pentru listare
+  image       String?  // imagine featured
+  author      String?
+  category    String?  // categoria articolului
+  tags        Json?    // array de taguri pentru SEO
+  published   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now())
+}
+
+model AbandonedCart {
+  id          Int      @id @default(autoincrement())
+  email       String
+  phone       String?
+  items       Json     // produsele din coș
+  total       Float
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now())
+  emailSent   Boolean  @default(false)
+  emailSentAt DateTime?
+  recovered   Boolean  @default(false) // dacă a finalizat comanda
+}
+
+model AdminSession {
+  id            Int      @id @default(autoincrement())
+  adminId       String   // email sau identificator admin
+  token         String   @unique // JWT token
+  createdAt     DateTime @default(now())
+  expiresAt     DateTime // când expiră sesiunea
+  ipAddress     String?  // IP-ul de la care s-a autentificat
+  userAgent     String?  // browser info
+}
+
+model AuditLog {
+  id            Int      @id @default(autoincrement())
+  adminId       String   // cine a efectuat acțiunea
+  action        String   // login, logout, create, update, delete, login_failed
+  resource      String   // users, products, orders, admin_auth, etc.
+  resourceId    String?  // ID-ul resursei afectate
+  details       String?  // detalii suplimentare
+  ipAddress     String   // IP-ul clientului
+  userAgent     String?  // browser info
+  success       Boolean  // dacă acțiunea a reușit
+  timestamp     DateTime @default(now())
+}

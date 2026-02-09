@@ -1,0 +1,12 @@
+[
+  {
+    "productId": 1,
+    "user": "Dan",
+    "rating": 5,
+    "text": "Recomand cu incredere produsul!",
+    "textEn": "I highly recommend this product!",
+    "id": 1769967901277,
+    "date": "01.02.2026",
+    "approved": true
+  }
+]

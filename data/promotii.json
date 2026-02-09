@@ -1,0 +1,20 @@
+[
+  {
+    "id": 2,
+    "title": "Promoție 2",
+    "titleEn": "Promotion 2",
+    "text": "Transport gratuit la comenzi peste 200 RON!",
+    "textEn": "Free shipping on orders over 200 RON!",
+    "image": "/banners/promo_2_1769967609678.jpg?t=1769967609678",
+    "active": true
+  },
+  {
+    "id": 1769966535573,
+    "title": "Promoție 1",
+    "titleEn": "Promotion 1",
+    "text": "Reducere de pana la 30%",
+    "textEn": "Discounts up to 30%",
+    "image": "/banners/promo_1769966535573_1770315539395.jpg?t=1770315539395",
+    "active": true
+  }
+]

@@ -1,0 +1,56 @@
+{
+  "acasa": {
+    "titlu": "Bine ați venit la PREV-COR TPM",
+    "subtitlu": "Soluții complete pentru instalații electrice și automatizări industriale",
+    "descriere": "Oferim servicii profesionale de proiectare, instalare și mentenanță pentru sisteme electrice și automatizări."
+  },
+  "despre": {
+    "titlu": "Despre Noi",
+    "descriere": "PREV-COR TPM este o companie specializată în domeniul instalațiilor electrice și automatizărilor industriale.",
+    "experienta": "15+ ani experiență",
+    "proiecte": "500+ proiecte finalizate",
+    "clienti": "200+ clienți mulțumiți"
+  },
+  "servicii": {
+    "titlu": "Serviciile Noastre",
+    "descriere": "Oferim o gamă completă de servicii în domeniul electric și automatizări.",
+    "lista": [
+      {
+        "nume": "Instalații electrice",
+        "descriere": "Proiectare și execuție instalații electrice industriale și rezidențiale"
+      },
+      {
+        "nume": "Automatizări industriale",
+        "descriere": "Sisteme de automatizare pentru procese industriale"
+      },
+      {
+        "nume": "Mentenanță",
+        "descriere": "Servicii de mentenanță preventivă și corectivă"
+      },
+      {
+        "nume": "Tablouri electrice",
+        "descriere": "Proiectare și asamblare tablouri electrice"
+      }
+    ]
+  },
+  "magazin": {
+    "titlu": "Magazin Online",
+    "descriere": "Echipamente electrice și componente de calitate pentru proiectele dumneavoastră.",
+    "banner": "Livrare rapidă în toată țara!"
+  },
+  "contact": {
+    "titlu": "Informații de Contact",
+    "telefon": "0735 623 509",
+    "email": "office.prevcortpm@gmail.com",
+    "adresa": "Strada Principala, nr.70, Stroesti, Mehedinti, România",
+    "codPostal": "227208",
+    "program": "Luni - Vineri: 08:00 - 17:00"
+  },
+  "cos": {
+    "tva": 21,
+    "moneda": "RON",
+    "livrareGratuita": 500,
+    "textLivrare": "",
+    "termenLivrare": ""
+  }
+}

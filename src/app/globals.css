@@ -1,0 +1,39 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  background: linear-gradient(120deg, #f7fafc 0%, #e3eafc 60%, #e0e7ef 100%);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+  -webkit-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
+}
+
+/* Card gradient fix pentru servicii - trebuie să fie după Tailwind pentru prioritate */
+.card-gradient {
+  background: linear-gradient(135deg, #e3eafc 0%, #b6c7e3 60%, #6b7fa7 100%) !important;
+  -webkit-background-clip: border-box;
+  background-clip: border-box;
+  box-shadow: 0 4px 24px 0 rgba(60, 90, 150, 0.08);
+  border-radius: 16px;
+  padding: 24px;
+  color: #fff;
+  text-align: center;
+  -webkit-appearance: none;
+  appearance: none;
+}

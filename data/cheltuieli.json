@@ -1,0 +1,34 @@
+[
+  {
+    "id": 1,
+    "furnizor": "Furnizor SRL",
+    "data": "2025-11-01",
+    "suma": 1200,
+    "tip": "Materii prime",
+    "proiect": "Proiect General"
+  },
+  {
+    "id": 2,
+    "furnizor": "Utilități SA",
+    "data": "2025-11-05",
+    "suma": 350,
+    "tip": "Utilități",
+    "proiect": "Proiect General"
+  },
+  {
+    "id": 3,
+    "furnizor": "Transport SRL",
+    "data": "2025-11-10",
+    "suma": 500,
+    "tip": "Transport",
+    "proiect": "Proiect General"
+  },
+  {
+    "id": 4,
+    "furnizor": "Flexik Automation",
+    "data": "2026-02-01",
+    "suma": 300,
+    "tip": "Proiectare mecanica",
+    "proiect": "Statie asamblare - Flx"
+  }
+]

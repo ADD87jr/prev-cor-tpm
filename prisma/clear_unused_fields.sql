@@ -1,0 +1,1 @@
+UPDATE Product SET advantages = NULL, specs = NULL;

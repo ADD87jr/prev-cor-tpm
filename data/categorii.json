@@ -1,0 +1,50 @@
+[
+  {
+    "id": 1,
+    "name": "Materii prime"
+  },
+  {
+    "id": 2,
+    "name": "Utilități"
+  },
+  {
+    "id": 3,
+    "name": "Transport"
+  },
+  {
+    "id": 4,
+    "name": "Salarii"
+  },
+  {
+    "id": 5,
+    "name": "Chirii"
+  },
+  {
+    "id": 6,
+    "name": "Marketing"
+  },
+  {
+    "id": 7,
+    "name": "IT & Software"
+  },
+  {
+    "id": 8,
+    "name": "Echipamente"
+  },
+  {
+    "id": 9,
+    "name": "Servicii externe"
+  },
+  {
+    "id": 10,
+    "name": "Taxe și impozite"
+  },
+  {
+    "id": 11,
+    "name": "Diverse"
+  },
+  {
+    "id": 12,
+    "name": "Proiectare mecanica"
+  }
+]
