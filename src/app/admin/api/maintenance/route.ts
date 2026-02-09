@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { writeFileSync } from "fs";
-import { join } from "path";
 import { adminAuthMiddleware } from "@/lib/auth-middleware";
-
-const statusFile = join(process.cwd(), 'public', 'maintenance-status.json');
 
 // GET: Check maintenance mode status
 export async function GET(req: NextRequest) {
@@ -41,9 +37,6 @@ export async function POST(req: NextRequest) {
       update: { value: enabled ? "true" : "false", updatedAt: new Date() },
       create: { key: "maintenanceMode", value: enabled ? "true" : "false" }
     });
-    
-    // Update static JSON file for middleware to read
-    writeFileSync(statusFile, JSON.stringify({ enabled }, null, 2), 'utf-8');
     
     return NextResponse.json({ 
       success: true, 

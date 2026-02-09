@@ -17,16 +17,16 @@ export default function MaintenanceWrapper({ children }: MaintenanceWrapperProps
   const isExcluded = pathname ? excludedPaths.some(path => pathname.startsWith(path)) : false;
 
   useEffect(() => {
-    // Check maintenance status from public JSON file
+    // Check maintenance status from API
     async function checkMaintenance() {
       try {
-        const res = await fetch('/maintenance-status.json', { cache: 'no-store' });
+        const res = await fetch('/api/maintenance-status', { cache: 'no-store' });
         if (res.ok) {
           const data = await res.json();
           setIsMaintenanceMode(data.enabled === true);
         }
       } catch {
-        // If file doesn't exist or can't be read, continue normally
+        // If API fails, continue normally
       } finally {
         setIsLoading(false);
       }
