@@ -15,6 +15,7 @@ import { CompareProvider } from "./_components/CompareContext";
 import { RecentlyViewedProvider } from "./_components/RecentlyViewedContext";
 import { LanguageProvider } from "./_components/LanguageContext";
 import LiveChatWidget from "./_components/LiveChatWidget";
+import MaintenanceWrapper from "./_components/MaintenanceWrapper";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -86,12 +87,14 @@ export default function RootLayout({
               <CartProvider>
                 <CompareProvider>
                   <RecentlyViewedProvider>
-                    <Navbar />
-                    {children}
-                    <Footer />
-                    <CompareBar />
-                    <CookieConsent />
-                    <LiveChatWidget />
+                    <MaintenanceWrapper>
+                      <Navbar />
+                      {children}
+                      <Footer />
+                      <CompareBar />
+                      <CookieConsent />
+                      <LiveChatWidget />
+                    </MaintenanceWrapper>
                   </RecentlyViewedProvider>
                 </CompareProvider>
               </CartProvider>
