@@ -8,7 +8,8 @@ function createPrismaClient(): PrismaClient {
   const tursoUrl = process.env.TURSO_DATABASE_URL;
   const tursoToken = process.env.TURSO_AUTH_TOKEN;
   
-  if (tursoUrl && tursoToken && !tursoUrl.includes('undefined')) {
+  // Only use Turso if BOTH url and token are properly set (not undefined/empty)
+  if (tursoUrl && tursoToken && tursoUrl !== 'undefined' && tursoToken !== 'undefined' && tursoUrl.startsWith('libsql://')) {
     try {
       // Dynamic import for Turso adapter (only when needed)
       const { PrismaLibSql } = require("@prisma/adapter-libsql");
@@ -19,6 +20,7 @@ function createPrismaClient(): PrismaClient {
         authToken: tursoToken,
       });
       const adapter = new PrismaLibSql(libsql);
+      console.log("Connected to Turso database");
       return new PrismaClient({ adapter });
     } catch (error) {
       console.warn("Failed to connect to Turso, falling back to SQLite:", error);
@@ -26,6 +28,7 @@ function createPrismaClient(): PrismaClient {
   }
   
   // Local SQLite for development or fallback
+  console.log("Using local SQLite database");
   return new PrismaClient();
 }
 
