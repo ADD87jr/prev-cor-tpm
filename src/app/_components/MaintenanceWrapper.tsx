@@ -14,7 +14,7 @@ export default function MaintenanceWrapper({ children }: MaintenanceWrapperProps
 
   // Paths that should be excluded from maintenance mode
   const excludedPaths = ['/admin', '/api', '/maintenance'];
-  const isExcluded = excludedPaths.some(path => pathname.startsWith(path));
+  const isExcluded = pathname ? excludedPaths.some(path => pathname.startsWith(path)) : false;
 
   useEffect(() => {
     // Check maintenance status from public JSON file
