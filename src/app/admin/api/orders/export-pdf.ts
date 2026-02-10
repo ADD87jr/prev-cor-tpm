@@ -1,5 +1,4 @@
 import { prisma } from "@/lib/prisma";
-import "@/lib/pdfkit-fix";
 import PDFDocument from "pdfkit";
 import path from "path";
 

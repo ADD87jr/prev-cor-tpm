@@ -1,6 +1,5 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import "@/lib/pdfkit-fix";
 import PDFDocument from "pdfkit";
 import fs from "fs";
 import path from "path";

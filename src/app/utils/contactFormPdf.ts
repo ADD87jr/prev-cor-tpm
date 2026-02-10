@@ -1,6 +1,5 @@
 
 
-import "@/lib/pdfkit-fix";
 import PDFDocument from "pdfkit";
 import path from "path";
 import { COMPANY_CONFIG } from "@/lib/companyConfig";

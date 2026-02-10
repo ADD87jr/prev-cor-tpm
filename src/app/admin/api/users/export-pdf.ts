@@ -1,5 +1,4 @@
 import { getAllUsers, User } from "../../../account/usersDb";
-import "@/lib/pdfkit-fix";
 import PDFDocument from "pdfkit";
 import path from "path";
 import { NextResponse } from "next/server";

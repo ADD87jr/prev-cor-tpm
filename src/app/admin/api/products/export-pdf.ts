@@ -1,5 +1,4 @@
 import { getProducts } from "../../productsDb";
-import "@/lib/pdfkit-fix";
 import PDFDocument from "pdfkit";
 import path from "path";
 

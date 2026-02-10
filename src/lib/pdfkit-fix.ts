@@ -1,28 +1,15 @@
-import fs from 'fs';
-import path from 'path';
+// PDFKit AFM fonts fix
+// Fonturile sunt copiate la build time de scripts/fix-pdfkit-helvetica.js
+// Acest import este doar pentru a asigura execuția fix-ului la build
 
-// Această funcție trebuie apelată ÎNAINTE de a importa PDFDocument
 export function ensurePdfKitFonts() {
-  const dataDir = path.join(process.cwd(), 'node_modules', 'pdfkit', 'js', 'data');
-  const sourceDir = path.join(process.cwd(), 'public', 'fonts', 'afm');
-  
-  // Lista de fonturi necesare
-  const requiredFonts = [
-    'Helvetica.afm',
-    'Helvetica-Bold.afm', 
-    'Helvetica-Oblique.afm',
-    'Helvetica-BoldOblique.afm',
-    'Times-Roman.afm',
-    'Times-Bold.afm',
-    'Times-Italic.afm',
-    'Times-BoldItalic.afm',
-    'Courier.afm',
-    'Courier-Bold.afm',
-    'Courier-Oblique.afm',
-    'Courier-BoldOblique.afm',
-    'Symbol.afm',
-    'ZapfDingbats.afm'
-  ];
+  // Fonturile sunt deja copiate la build time
+  // Această funcție există doar pentru compatibilitate
+  console.log('[PDFKit] Fonts should be available from build time');
+}
+
+// Nu mai apelăm nimic la runtime - totul e făcut la build
+
 
   // Conținut AFM minimal valid
   const minimalAfm = `StartFontMetrics 4.1

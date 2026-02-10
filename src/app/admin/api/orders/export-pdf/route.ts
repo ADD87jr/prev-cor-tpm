@@ -1,7 +1,6 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getAllOrders } from "../../../../account/usersDb";
-import "@/lib/pdfkit-fix";
 import PDFDocument from "pdfkit";
 import path from "path";
 import { adminAuthMiddleware } from "@/lib/auth-middleware";
