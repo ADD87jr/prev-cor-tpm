@@ -30,7 +30,7 @@ function RecommendedProducts({ currentProduct }: { currentProduct: any }) {
   };
 
   useEffect(() => {
-    fetch('/admin/api/products')
+    fetch('/api/products')
       .then(res => res.json())
       .then(data => {
         // Recomandă produse cu același tip sau domeniu, dar nu produsul curent

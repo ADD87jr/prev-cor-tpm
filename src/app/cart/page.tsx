@@ -105,7 +105,7 @@ function CartPageInner() {
   }, []);
 
   React.useEffect(() => {
-    fetch('/admin/api/products')
+    fetch('/api/products')
       .then(res => res.json())
       .then(data => setCatalogProducts(Array.isArray(data) ? data : []));
   }, []);
