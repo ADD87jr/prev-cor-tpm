@@ -84,10 +84,12 @@ export async function generateOrderConfirmationPdfBuffer(order: any, language?: 
   // --- LOGICA PDF COPIATĂ DIN generate-invoice.ts ---
   const fontPath = path.join(process.cwd(), "public", "fonts", "Roboto-Regular.ttf");
   const fontBoldPath = path.join(process.cwd(), "public", "fonts", "Roboto-Bold.ttf");
-  const doc = new PDFDocument({ margin: 20, size: 'A4', layout: 'landscape' });
+  // Folosim autoFirstPage: false pentru a evita încărcarea Helvetica implicit
+  const doc = new PDFDocument({ margin: 20, size: 'A4', layout: 'landscape', autoFirstPage: false });
   doc.registerFont("Roboto", fontPath);
   doc.registerFont("Roboto-Bold", fontBoldPath);
   doc.font("Roboto");
+  doc.addPage({ margin: 20, size: 'A4', layout: 'landscape' });
   let buffers: Buffer[] = [];
   doc.on("data", (d: Buffer) => buffers.push(d));
 

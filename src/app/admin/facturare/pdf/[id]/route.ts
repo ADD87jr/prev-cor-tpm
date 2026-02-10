@@ -46,10 +46,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   // Refolosim codul PDF din API-ul principal
   const fontPath = path.join(process.cwd(), "public", "fonts", "Roboto-Regular.ttf");
   const fontBoldPath = path.join(process.cwd(), "public", "fonts", "Roboto-Bold.ttf");
-  const doc = new PDFDocument({ margin: 20, size: 'A4', layout: 'landscape' });
+  const doc = new PDFDocument({ margin: 20, size: 'A4', layout: 'landscape', autoFirstPage: false });
   doc.registerFont("Roboto", fontPath);
   doc.registerFont("Roboto-Bold", fontBoldPath);
   doc.font("Roboto");
+  doc.addPage({ margin: 20, size: 'A4', layout: 'landscape' });
   let buffers: Buffer[] = [];
   doc.on("data", (d: Buffer) => buffers.push(d));
   // --- aici se poate importa/refolosi logică din generate-invoice.ts pentru layout modern ---

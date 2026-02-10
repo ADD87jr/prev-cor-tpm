@@ -5,12 +5,13 @@ import { NextResponse } from "next/server";
 
 export async function GET() {
   const users = getAllUsers();
-  const doc = new PDFDocument({ margin: 30, size: 'A4' });
+  const doc = new PDFDocument({ margin: 30, size: 'A4', autoFirstPage: false });
   const fontPath = path.join(process.cwd(), "public", "fonts", "Roboto-Regular.ttf");
   const fontBoldPath = path.join(process.cwd(), "public", "fonts", "Roboto-Bold.ttf");
   doc.registerFont("Roboto", fontPath);
   doc.registerFont("Roboto-Bold", fontBoldPath);
   doc.font("Roboto");
+  doc.addPage({ margin: 30, size: 'A4' });
   let buffers: Buffer[] = [];
   doc.on('data', buffers.push.bind(buffers));
   doc.on('end', () => {});

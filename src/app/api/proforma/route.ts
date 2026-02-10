@@ -21,10 +21,11 @@ export async function POST(req: NextRequest) {
     deliveryTime: item.deliveryTime || item.deliveryTerm || '-'
   }));
   const summary = calculateCartSummary({ products });
-  const doc = new PDFDocument({ margin: 40 });
+  const doc = new PDFDocument({ margin: 40, autoFirstPage: false });
   doc.registerFont("Roboto", fontPath);
   doc.registerFont("Roboto-Bold", fontBoldPath);
   doc.font("Roboto");
+  doc.addPage({ margin: 40 });
   let buffers: Buffer[] = [];
   doc.on("data", buffers.push.bind(buffers));
   doc.on("end", () => {});

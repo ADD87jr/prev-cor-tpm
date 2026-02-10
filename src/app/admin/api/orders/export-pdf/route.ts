@@ -9,11 +9,12 @@ export async function GET(req: NextRequest) {
   const authError = await adminAuthMiddleware(req);
   if (authError) return authError;
   const orders = getAllOrders();
-  const doc = new PDFDocument({ margin: 30, size: 'A4' });
+  const doc = new PDFDocument({ margin: 30, size: 'A4', autoFirstPage: false });
   // Înregistrare și setare font Roboto
   const fontPath = path.join(process.cwd(), "public", "fonts", "Roboto-Regular.ttf");
   doc.registerFont("Roboto", fontPath);
   doc.font('Roboto');
+  doc.addPage({ margin: 30, size: 'A4' });
   let buffers: Buffer[] = [];
   doc.on('data', buffers.push.bind(buffers));
   doc.on('end', () => {});

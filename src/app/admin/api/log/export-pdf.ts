@@ -6,11 +6,12 @@ import path from "path";
 
 export async function GET() {
   const log = getAdminLog();
-  const doc = new PDFDocument({ margin: 30, size: 'A4' });
+  const doc = new PDFDocument({ margin: 30, size: 'A4', autoFirstPage: false });
   // Înregistrare și setare font Roboto
   const fontPath = path.join(process.cwd(), "public", "fonts", "Roboto-Regular.ttf");
   doc.registerFont("Roboto", fontPath);
   doc.font("Roboto");
+  doc.addPage({ margin: 30, size: 'A4' });
   let buffers: Buffer[] = [];
   doc.on('data', buffers.push.bind(buffers));
   doc.on('end', () => {});

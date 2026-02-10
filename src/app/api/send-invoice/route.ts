@@ -14,10 +14,11 @@ export async function POST(req: Request) {
   // Folosește doar fonturile Roboto
   const fontPath = path.join(process.cwd(), "public", "fonts", "Roboto-Regular.ttf");
   const fontBoldPath = path.join(process.cwd(), "public", "fonts", "Roboto-Bold.ttf");
-  const doc = new PDFDocument({ margin: 40 });
+  const doc = new PDFDocument({ margin: 40, autoFirstPage: false });
   doc.registerFont("Roboto", fontPath);
   doc.registerFont("Roboto-Bold", fontBoldPath);
   doc.font("Roboto");
+  doc.addPage({ margin: 40 });
   let buffers: Uint8Array[] = [];
   doc.on("data", (d: Uint8Array) => buffers.push(d));
 
