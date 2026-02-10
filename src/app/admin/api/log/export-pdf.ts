@@ -1,6 +1,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminLog } from "../../adminLogDb";
+import "@/lib/pdfkit-fix";
 import PDFDocument from "pdfkit";
 import path from "path";
 

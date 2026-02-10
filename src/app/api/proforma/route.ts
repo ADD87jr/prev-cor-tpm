@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import "@/lib/pdfkit-fix";
 import PDFDocument from "pdfkit";
 import path from "path";
 import fs from "fs";
