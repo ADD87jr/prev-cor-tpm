@@ -9,8 +9,8 @@ export default function Home() {
   // Texte în engleză
   const enTexts = {
     titlu: "Welcome to PREV-COR TPM",
-    subtitlu: "Complete solutions for electrical installations and industrial automation",
-    descriere: "We offer professional design, installation and maintenance services for electrical systems and automation.",
+    subtitlu: "Intelligent Industrial Automation Solutions",
+    descriere: "PREV-COR TPM offers complete industrial automation solutions: consulting, design, installation and maintenance. Online store with fast delivery throughout Romania.",
     textB2B: "We also offer B2B services for companies. Contact us for a personalized offer!",
     avantaj1Emoji: "🚀", avantaj1Titlu: "Speed", avantaj1Text: "Fast implementation and delivery of solutions.",
     avantaj2Emoji: "🔒", avantaj2Titlu: "Security", avantaj2Text: "We protect customer data and confidentiality.",
