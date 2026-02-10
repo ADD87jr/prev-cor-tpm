@@ -2,6 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { useSession } from 'next-auth/react';
 
 interface MaintenanceWrapperProps {
   children: React.ReactNode;
@@ -9,12 +10,17 @@ interface MaintenanceWrapperProps {
 
 export default function MaintenanceWrapper({ children }: MaintenanceWrapperProps) {
   const pathname = usePathname();
+  const { data: session } = useSession();
   const [isMaintenanceMode, setIsMaintenanceMode] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   // Paths that should be excluded from maintenance mode
   const excludedPaths = ['/admin', '/api', '/maintenance'];
   const isExcluded = pathname ? excludedPaths.some(path => pathname.startsWith(path)) : false;
+  
+  // Check if user is admin (based on session)
+  const isAdmin = session?.user?.email === 'office.prevcortpm@gmail.com' || 
+                  (session?.user as any)?.isAdmin === true;
 
   useEffect(() => {
     // Check maintenance status from API
@@ -39,8 +45,8 @@ export default function MaintenanceWrapper({ children }: MaintenanceWrapperProps
     }
   }, [pathname, isExcluded]);
 
-  // Don't show maintenance page for excluded paths
-  if (isExcluded) {
+  // Don't show maintenance page for excluded paths or admin users
+  if (isExcluded || isAdmin) {
     return <>{children}</>;
   }
 
