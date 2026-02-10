@@ -1,17 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import fs from "fs";
-import path from "path";
 import { adminAuthMiddleware } from "@/lib/auth-middleware";
 
-const CHELTUIELI_FILE = path.join(process.cwd(), "data", "cheltuieli.json");
+const CHELTUIELI_KEY = "cheltuieli_data";
 
-function loadCheltuieli() {
+async function loadCheltuieli() {
   try {
-    if (fs.existsSync(CHELTUIELI_FILE)) {
-      return JSON.parse(fs.readFileSync(CHELTUIELI_FILE, "utf-8"));
+    const setting = await prisma.siteSettings.findUnique({ where: { key: CHELTUIELI_KEY } });
+    if (setting?.value) {
+      return JSON.parse(setting.value);
     }
-  } catch (err) {}
+  } catch (err) {
+    console.error("Error loading cheltuieli:", err);
+  }
   return [];
 }
 
@@ -31,7 +32,7 @@ export async function GET(req: NextRequest) {
   const clientReport = users.map((u: any) => ({ name: u.name, email: u.email, orders: u.orders?.length ?? 0 }));
 
   // Cheltuieli - ultimele 10
-  const allCheltuieli = loadCheltuieli();
+  const allCheltuieli = await loadCheltuieli();
   const recentCheltuieli = allCheltuieli
     .sort((a: any, b: any) => new Date(b.data).getTime() - new Date(a.data).getTime())
     .slice(0, 10);

@@ -1,13 +1,10 @@
 /**
  * Configurație centralizată pentru datele companiei
  * Datele se pot edita din Admin → Editare → COMPANIE
- * Fișierul JSON: data/companie.json
+ * Datele sunt stocate în baza de date (SiteSettings)
  */
 
-import fs from "fs";
-import path from "path";
-
-// Valori default (folosite ca fallback dacă fișierul JSON nu există)
+// Valori default (folosite ca fallback)
 const defaultConfig = {
   name: "S.C. PREV-COR TPM S.R.L.",
   shortName: "PREV-COR TPM",
@@ -31,22 +28,9 @@ const defaultConfig = {
   vapidEmail: "mailto:office@prevcortpm.ro",
 };
 
-// Citește configurația din fișierul JSON (doar server-side)
-function loadCompanyConfig() {
-  try {
-    const dataFile = path.join(process.cwd(), "data", "companie.json");
-    if (fs.existsSync(dataFile)) {
-      const data = JSON.parse(fs.readFileSync(dataFile, "utf-8"));
-      return { ...defaultConfig, ...data };
-    }
-  } catch (e) {
-    console.warn("Could not load companie.json, using defaults");
-  }
-  return defaultConfig;
-}
-
-// Export configurația (încarcă din JSON la prima folosire)
-export const COMPANY_CONFIG = loadCompanyConfig();
+// Export configurația default (pentru compatibilitate)
+// Datele actualizate se încarcă din API când e nevoie
+export const COMPANY_CONFIG = defaultConfig;
 
 // Helper pentru adresa formatată
 export function getFormattedAddress(lang: 'ro' | 'en' = 'ro') {

@@ -1,34 +1,25 @@
-import { promises as fs } from 'fs';
-import path from 'path';
+import { prisma } from '@/lib/prisma';
 
-const DATA_DIR = path.join(process.cwd(), 'data');
-const FILE_PATH = path.join(DATA_DIR, 'pagini.json');
+const PAGES_KEY = 'site_pages';
 
 // Returnează TVA% configurat din admin (default 19)
 export async function getTvaPercent(): Promise<number> {
   try {
-    const raw = await fs.readFile(FILE_PATH, 'utf-8');
-    const data = JSON.parse(raw);
-    if (data?.cos?.tva !== undefined) {
-      return Number(data.cos.tva);
+    const setting = await prisma.siteSettings.findUnique({ where: { key: PAGES_KEY } });
+    if (setting?.value) {
+      const data = JSON.parse(setting.value);
+      if (data?.cos?.tva !== undefined) {
+        return Number(data.cos.tva);
+      }
     }
   } catch {
-    // Fișier inexistent sau eroare JSON
+    // Eroare la citire din baza de date
   }
   return 19; // default
 }
 
 // Versiune sincronă pentru locuri unde async nu e posibil
+// Returnează valoarea default
 export function getTvaPercentSync(): number {
-  try {
-    const fsSync = require('fs');
-    const raw = fsSync.readFileSync(FILE_PATH, 'utf-8');
-    const data = JSON.parse(raw);
-    if (data?.cos?.tva !== undefined) {
-      return Number(data.cos.tva);
-    }
-  } catch {
-    // Fișier inexistent sau eroare JSON
-  }
-  return 19;
+  return 19; // Default, folosit doar ca fallback
 }
