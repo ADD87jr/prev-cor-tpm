@@ -88,7 +88,7 @@ export default function ContactPage() {
   };
 
   useEffect(() => {
-    fetch("/admin/api/pagini?pagina=contact")
+    fetch("/api/pages?pagina=contact")
       .then((res) => res.json())
       .then((data) => {
         if (data && data.telefon) {

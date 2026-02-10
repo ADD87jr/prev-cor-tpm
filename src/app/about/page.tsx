@@ -72,7 +72,7 @@ export default function AboutPage() {
   });
 
   useEffect(() => {
-    fetch("/admin/api/pagini?pagina=despre")
+    fetch("/api/pages?pagina=despre")
       .then(res => res.json())
       .then(data => { if (data) setP(prev => ({ ...prev, ...data })); })
       .catch(() => {});

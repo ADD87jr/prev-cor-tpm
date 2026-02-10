@@ -32,8 +32,8 @@ export default function Home() {
 
   // Date editabile din admin - toate secțiunile
   const [p, setP] = useState({
-    titlu: "Bine ai venit la PREV-COR TPM",
-    subtitlu: "Soluții complete pentru instalații electrice și automatizări industriale",
+    titlu: "Bine ați venit la PREV-COR TPM",
+    subtitlu: "Solutii Inteligente de Automatizare Industriala",
     descriere: "Oferim servicii profesionale de proiectare, instalare și mentenanță pentru sisteme electrice și automatizări.",
     textB2B: "Oferim și servicii B2B pentru companii. Contactează-ne pentru o ofertă personalizată!",
     avantaj1Emoji: "🚀", avantaj1Titlu: "Rapiditate", avantaj1Text: "Implementare și livrare rapidă a soluțiilor.",
@@ -55,7 +55,7 @@ export default function Home() {
   });
 
   useEffect(() => {
-    fetch('/admin/api/pagini?pagina=acasa')
+    fetch('/api/pages?pagina=acasa')
       .then(res => res.json())
       .then(data => {
         if (data) {

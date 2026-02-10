@@ -7,7 +7,7 @@ import { adminAuthMiddleware } from "@/lib/auth-middleware";
 const defaultData: Record<string, any> = {
   acasa: {
     titlu: "Bine ați venit la PREV-COR TPM",
-    subtitlu: "Soluții complete pentru instalații electrice și automatizări industriale",
+    subtitlu: "Solutii Inteligente de Automatizare Industriala",
     descriere: "Oferim servicii profesionale de proiectare, instalare și mentenanță pentru sisteme electrice și automatizări.",
   },
   despre: {

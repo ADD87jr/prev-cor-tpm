@@ -22,7 +22,7 @@ function PlataCardContent() {
   
   // Încarcă TVA configurat din admin
   React.useEffect(() => {
-    fetch('/admin/api/pagini?pagina=cos')
+    fetch('/api/pages?pagina=cos')
       .then(res => res.json())
       .then(data => {
         if (data && data.tva !== undefined) {
