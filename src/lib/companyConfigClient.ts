@@ -12,7 +12,7 @@ export const COMPANY_CONFIG_CLIENT = {
   regCom: "J25/582/2020",
   phone: "0732 935 623",
   phoneClean: "40732935623",
-  email: "office.prevcortpm@gmail.com",
+  email: "office@prevcortpm.ro",
   whatsapp: "https://wa.me/40732935623",
   address: {
     street: "Principala",

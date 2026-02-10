@@ -103,7 +103,7 @@ export default function EditarePaginiPage() {
     regCom: "J25/582/2020",
     phone: "0732 935 623",
     phoneClean: "40732935623",
-    email: "office.prevcortpm@gmail.com",
+    email: "office@prevcortpm.ro",
     whatsapp: "https://wa.me/40732935623",
     address: {
       street: "Principala",
@@ -890,7 +890,7 @@ export default function EditarePaginiPage() {
                   value={companie.email}
                   onChange={(e) => setCompanie({ ...companie, email: e.target.value })}
                   className="w-full border rounded px-3 py-2"
-                  placeholder="Ex: office.prevcortpm@gmail.com"
+                  placeholder="Ex: office@prevcortpm.ro"
                 />
               </div>
             </div>
