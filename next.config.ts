@@ -1,6 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Include PDFKit AFM font files in serverless functions
+  outputFileTracingIncludes: {
+    '/api/*': ['./node_modules/pdfkit/js/data/**/*', './public/fonts/afm/**/*'],
+    '/admin/api/*': ['./node_modules/pdfkit/js/data/**/*', './public/fonts/afm/**/*'],
+    '/admin/facturare/*': ['./node_modules/pdfkit/js/data/**/*', './public/fonts/afm/**/*'],
+  },
   // Security headers pentru protecție XSS, clickjacking, etc.
   async headers() {
     // Content Security Policy - strict but allowing necessary resources
