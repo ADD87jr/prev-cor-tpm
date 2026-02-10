@@ -295,7 +295,7 @@ export default function ShopPage() {
     setLoadingProducts(true);
     Promise.all([
       fetch("/api/products").then(res => res.json()),
-      fetch("/admin/api/promotii").then(res => res.json())
+      fetch("/api/promotii").then(res => res.json())
     ])
       .then(([productsData, promosData]) => {
         setProducts(productsData);
