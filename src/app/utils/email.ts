@@ -1,42 +1,46 @@
-import nodemailer from "nodemailer";
+import { Resend } from 'resend';
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function sendEmail({ to, subject, text, html, attachments }: {
   to: string;
   subject: string;
   text?: string;
   html?: string;
-  attachments?: any[];
+  attachments?: { filename: string; content: Buffer }[];
 }) {
   try {
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST || "smtp.ethereal.email",
-      port: Number(process.env.SMTP_PORT) || 587,
-      auth: {
-        user: process.env.SMTP_USER || "demo@ethereal.email",
-        pass: process.env.SMTP_PASS || "demo"
-      }
-    });
-    const info = await transporter.sendMail({
-      from: process.env.SMTP_FROM || 'noreply@prevcor.ro',
-      to,
+    const fromEmail = process.env.EMAIL_FROM || 'office@prevcortpm.ro';
+    const fromName = process.env.EMAIL_FROM_NAME || 'Prev-Cor TPM';
+    
+    const emailData: any = {
+      from: `${fromName} <${fromEmail}>`,
+      to: [to],
       subject,
-      text,
-      html,
-      attachments
-    });
-    console.log('[EMAIL] Email trimis:', info);
-    if (info.rejected && info.rejected.length > 0) {
-      console.error('[EMAIL] Email REJECTED de serverul SMTP:', info.rejected);
+    };
+    
+    if (html) emailData.html = html;
+    if (text) emailData.text = text;
+    
+    // Convert attachments to Resend format
+    if (attachments && attachments.length > 0) {
+      emailData.attachments = attachments.map(att => ({
+        filename: att.filename,
+        content: att.content,
+      }));
     }
-    if (info.response) {
-      console.log('[EMAIL] Răspuns SMTP:', info.response);
+    
+    const { data, error } = await resend.emails.send(emailData);
+    
+    if (error) {
+      console.error('[EMAIL] Eroare Resend:', error);
+      throw new Error(error.message);
     }
-    return info;
+    
+    console.log('[EMAIL] Email trimis cu succes via Resend:', data);
+    return data;
   } catch (err) {
     console.error('[EMAIL] Eroare la trimitere:', err);
-    if (err && typeof err === 'object' && 'response' in err) {
-      console.error('[EMAIL] Detalii răspuns SMTP:', (err as any).response);
-    }
     throw err;
   }
 }
