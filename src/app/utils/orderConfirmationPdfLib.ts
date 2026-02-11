@@ -204,6 +204,63 @@ export async function generateOrderConfirmationPdfBuffer(order: any, language?: 
   });
   y -= 12;
   
+  // Postal code
+  page.drawText(`${txt.postalCode}: 227208`, {
+    x: col1X,
+    y: y,
+    size: 9,
+    font: helvetica,
+  });
+  
+  const clientPostalCode = client.postalCode || client.codPostal || '';
+  if (clientPostalCode) {
+    page.drawText(`${txt.postalCode}: ${clientPostalCode}`, {
+      x: col2X,
+      y: y,
+      size: 9,
+      font: helvetica,
+    });
+  }
+  y -= 12;
+  
+  // Bank account (IBAN)
+  page.drawText(`${txt.account}: RO23BRDE360SV67547173600`, {
+    x: col1X,
+    y: y,
+    size: 9,
+    font: helvetica,
+  });
+  
+  const clientIban = client.iban || client.contBancar || '';
+  if (clientIban) {
+    page.drawText(`${txt.account}: ${clientIban}`, {
+      x: col2X,
+      y: y,
+      size: 9,
+      font: helvetica,
+    });
+  }
+  y -= 12;
+  
+  // Bank name
+  page.drawText(`${txt.bank}: BRD - Groupe Societe Generale`, {
+    x: col1X,
+    y: y,
+    size: 9,
+    font: helvetica,
+  });
+  
+  const clientBank = client.bank || client.banca || '';
+  if (clientBank) {
+    page.drawText(`${txt.bank}: ${clientBank}`, {
+      x: col2X,
+      y: y,
+      size: 9,
+      font: helvetica,
+    });
+  }
+  y -= 12;
+  
   // Phone
   page.drawText(`${txt.phoneLabel}: ${COMPANY_CONFIG.phone}`, {
     x: col1X,
