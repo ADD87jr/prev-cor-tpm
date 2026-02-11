@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { generateOrderConfirmationPdfBuffer } from "@/app/utils/orderConfirmationPdf";
+import { generateOrderConfirmationPdfBuffer } from "@/app/utils/orderConfirmationPdfLib";
 import { generateInvoiceNumber } from "@/app/utils/invoiceNumber";
 import { COMPANY_CONFIG } from "@/lib/companyConfig";
 

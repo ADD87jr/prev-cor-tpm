@@ -104,7 +104,7 @@ export async function POST(req: NextRequest) {
     if (createdOrder.status !== 'așteptare plată') {
     try {
       const { sendEmail } = await import("@/app/utils/email");
-      const { generateOrderConfirmationPdfBuffer } = await import("@/app/utils/orderConfirmationPdf");
+      const { generateOrderConfirmationPdfBuffer } = await import("@/app/utils/orderConfirmationPdfLib");
       const clientData = createdOrder.clientData && typeof createdOrder.clientData === "object" && !Array.isArray(createdOrder.clientData) ? createdOrder.clientData : {};
       const email = typeof (clientData as any).email === "string" ? (clientData as any).email : null;
       if (email) {

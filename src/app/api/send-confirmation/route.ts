@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
-import { generateOrderConfirmationPdfBuffer } from "@/app/utils/orderConfirmationPdf";
+import { generateOrderConfirmationPdfBuffer } from "@/app/utils/orderConfirmationPdfLib";
 import { calculateCartSummary, CartSummaryProduct } from "@/app/utils/cartSummary";
 
 export async function POST(req: Request) {

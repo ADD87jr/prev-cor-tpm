@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sendEmail } from "@/app/utils/email";
-import { generateOrderConfirmationPdfBuffer } from "@/app/utils/orderConfirmationPdf";
+import { generateOrderConfirmationPdfBuffer } from "@/app/utils/orderConfirmationPdfLib";
 import { prisma } from "@/lib/prisma";
 import { calculateCartSummary, CartSummaryProduct } from "@/app/utils/cartSummary";
 import { getTvaPercent } from "@/lib/getTvaPercent";
