@@ -268,8 +268,7 @@ export async function POST(req: NextRequest) {
           attachments: [
             {
               filename: `comanda-${createdOrder.id || 'manual'}.pdf`,
-              content: pdfBuffer,
-              contentType: 'application/pdf'
+              content: pdfBuffer
             }
           ]
         });
