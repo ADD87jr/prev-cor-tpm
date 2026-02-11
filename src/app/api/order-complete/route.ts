@@ -495,20 +495,35 @@ export async function POST(req: NextRequest) {
       number: orderRecord?.number,
       date: orderRecord?.date
     };
-    let pdfBuffer = await generateOrderConfirmationPdfBuffer(pdfOrder, lang);
+    
+    // Try to generate PDF, but don't block order if it fails
+    let pdfBuffer: Buffer | null = null;
+    try {
+      pdfBuffer = await generateOrderConfirmationPdfBuffer(pdfOrder, lang);
+    } catch (pdfError) {
+      console.error('[PDF] Error generating PDF (order will continue without attachment):', pdfError);
+    }
+    
     const pdfFilename = lang === 'en' ? `order-confirmation-${Date.now()}.pdf` : `confirmare-comanda-${Date.now()}.pdf`;
-    await sendEmail({
+    
+    // Send email with or without PDF attachment
+    const emailOptions: Parameters<typeof sendEmail>[0] = {
       to: userEmail,
       subject,
       text,
       html,
-      attachments: [
+    };
+    
+    if (pdfBuffer) {
+      emailOptions.attachments = [
         {
           filename: pdfFilename,
           content: pdfBuffer
         }
-      ]
-    });
+      ];
+    }
+    
+    await sendEmail(emailOptions);
     // Trimite notificare push către admin
     try {
       await notifyNewOrder(
