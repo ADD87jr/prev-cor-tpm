@@ -1,16 +1,12 @@
 // ...existing code...
-import path from "path";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { generateOrderConfirmationPdfBuffer } from "@/app/utils/orderConfirmationPdf";
+import { generateOrderConfirmationPdfBuffer } from "@/app/utils/orderConfirmationPdfLib";
 import { calculateCartSummary, CartSummaryProduct } from "@/app/utils/cartSummary";
 import { sendEmail } from "@/app/utils/email";
 import { getTvaPercent } from "@/lib/getTvaPercent";
 import { notifyNewOrder } from "@/lib/push-notifications";
 import { COMPANY_CONFIG } from "@/lib/companyConfig";
-
-const fontPath = path.join(process.cwd(), "public", "fonts", "Roboto-Regular.ttf");
-const fontBoldPath = path.join(process.cwd(), "public", "fonts", "Roboto-Bold.ttf");
 
 
 export async function POST(req: NextRequest) {
