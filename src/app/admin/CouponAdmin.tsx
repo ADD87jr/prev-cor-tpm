@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Toast from "@/components/Toast";
+import ConfirmModal from "@/components/ConfirmModal";
 
 type Coupon = {
   id: number;
@@ -15,6 +16,7 @@ type Coupon = {
 export default function CouponAdmin() {
   // Toast state
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [deleteCouponId, setDeleteCouponId] = useState<number | null>(null);
   function showToast(message: string, type: 'success' | 'error' = 'success') {
     setToast({ message, type });
     setTimeout(() => setToast(null), 2500);
@@ -79,11 +81,15 @@ export default function CouponAdmin() {
     setEditId(c.id);
   }
   function handleDelete(id: number) {
-    if (!window.confirm("Sigur ștergi acest cupon?")) return;
+    setDeleteCouponId(id);
+  }
+  
+  function confirmDelete() {
+    if (!deleteCouponId) return;
     fetch("/admin/api/coupons", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id }),
+      body: JSON.stringify({ id: deleteCouponId }),
     }).then(res => {
       if (res.ok) {
         showToast("Cupon șters cu succes!", "success");
@@ -91,6 +97,7 @@ export default function CouponAdmin() {
       } else {
         showToast("Eroare la ștergere cupon!", "error");
       }
+      setDeleteCouponId(null);
     });
   }
 
@@ -145,6 +152,19 @@ export default function CouponAdmin() {
           {coupons.length === 0 && <tr><td colSpan={7} className="p-4 text-center text-gray-500">Niciun cupon.</td></tr>}
         </tbody>
       </table>
+
+      {/* Modal confirmare ștergere cupon */}
+      <ConfirmModal
+        isOpen={deleteCouponId !== null}
+        title="Ștergere cupon"
+        message="Sigur vrei să ștergi acest cupon? Acțiunea este ireversibilă."
+        confirmText="Da, șterge"
+        cancelText="Anulează"
+        confirmColor="red"
+        icon="danger"
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteCouponId(null)}
+      />
     </div>
   );
 }

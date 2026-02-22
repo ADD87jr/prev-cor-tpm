@@ -252,23 +252,9 @@ export async function generateOrderConfirmationPdfBuffer(order: any, language?: 
       }));
       const summary = calculateCartSummary({ products: mappedProducts });
       summaryProducts = mappedProducts.map((item: any) => {
+        // NU aplicăm discount suplimentar - prețul deja include reducerea de produs
         let priceAfterProductDiscount = item.price;
         let productDiscount = 0;
-        
-        // Folosește valoarea pre-calculată dacă există, altfel calculează
-        if (typeof item.productDiscountValue === 'number' && item.productDiscountValue > 0) {
-          productDiscount = item.productDiscountValue;
-          priceAfterProductDiscount = item.price - productDiscount;
-        } else if (typeof item.discount === 'number' && item.discount > 0) {
-          if (item.discountType === 'percent' || !item.discountType) {
-            const percent = item.discount <= 1 ? item.discount * 100 : item.discount;
-            productDiscount = item.price * (percent / 100);
-          } else {
-            productDiscount = item.discount;
-          }
-          priceAfterProductDiscount = item.price - productDiscount;
-        }
-        if (priceAfterProductDiscount < 0) priceAfterProductDiscount = 0;
         
         let couponDiscount = 0;
         let priceAfterCoupon = priceAfterProductDiscount;

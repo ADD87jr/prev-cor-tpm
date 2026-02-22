@@ -83,7 +83,13 @@ const authOptions: AuthOptions = {
       return session;
     }
   },
-  session: { strategy: "jwt" as const },
+  session: { 
+    strategy: "jwt" as const,
+    maxAge: 365 * 24 * 60 * 60, // 1 an - sesiunea nu expiră automat
+  },
+  jwt: {
+    maxAge: 365 * 24 * 60 * 60, // 1 an
+  },
   pages: {
     signIn: "/login"
   }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import ConfirmModal from "@/components/ConfirmModal";
 
 interface Cheltuiala {
   id: number;
@@ -86,6 +87,7 @@ export default function CheltuieliPage() {
   const [filterDataEnd, setFilterDataEnd] = useState("");
   // Toast feedback
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [deleteIdx, setDeleteIdx] = useState<number | null>(null);
   function showToast(message: string, type: 'success' | 'error' = 'success') {
     setToast({ message, type });
     setTimeout(() => setToast(null), 2500);
@@ -98,9 +100,12 @@ export default function CheltuieliPage() {
       fetch("/admin/api/cheltuieli?type=proiecte").then(res => res.json()),
       fetch("/admin/api/cheltuieli?type=categorii").then(res => res.json())
     ]).then(([chelt, proj, cat]) => {
-      setCheltuieli(chelt);
-      setProiecte(proj);
-      setCategorii(cat);
+      setCheltuieli(Array.isArray(chelt) ? chelt : []);
+      setProiecte(Array.isArray(proj) ? proj : []);
+      setCategorii(Array.isArray(cat) ? cat : []);
+      setLoading(false);
+    }).catch(err => {
+      console.error("Error loading cheltuieli data:", err);
       setLoading(false);
     });
   }, []);
@@ -158,7 +163,6 @@ export default function CheltuieliPage() {
   }
 
   async function handleDeleteCheltuiala(idx: number) {
-    if (!confirm("Sigur vrei să ștergi această cheltuială?")) return;
     const c = cheltuieli[idx];
     const res = await fetch("/admin/api/cheltuieli", {
       method: "POST",
@@ -171,6 +175,7 @@ export default function CheltuieliPage() {
     } else {
       showToast("Eroare la ștergere!", "error");
     }
+    setDeleteIdx(null);
   }
 
   async function handleAddCheltuiala() {
@@ -189,7 +194,7 @@ export default function CheltuieliPage() {
       }),
     });
     const data = await res.json();
-    if (data.success) {
+    if (data.success && Array.isArray(data.cheltuieli)) {
       setCheltuieli(data.cheltuieli);
       setNewCheltuiala({ furnizor: "", data: "", suma: "", tip: "", proiect: "" });
       showToast("Cheltuială adăugată!", "success");
@@ -623,7 +628,7 @@ export default function CheltuieliPage() {
                       </td>
                       <td className="p-4">
                         <button className="text-blue-700 font-bold mr-2" onClick={() => handleEditCheltuiala(realIdx)}>Editează</button>
-                        <button className="text-red-700 font-bold" onClick={() => handleDeleteCheltuiala(realIdx)}>Șterge</button>
+                        <button className="text-red-700 font-bold" onClick={() => setDeleteIdx(realIdx)}>Șterge</button>
                       </td>
                     </tr>
                   );
@@ -686,6 +691,19 @@ export default function CheltuieliPage() {
           </div>
         </>
       )}
+
+      {/* Modal confirmare ștergere cheltuială */}
+      <ConfirmModal
+        isOpen={deleteIdx !== null}
+        onCancel={() => setDeleteIdx(null)}
+        onConfirm={() => deleteIdx !== null && handleDeleteCheltuiala(deleteIdx)}
+        title="Confirmare ștergere"
+        message="Sigur vrei să ștergi această cheltuială?"
+        confirmText="Șterge"
+        cancelText="Anulează"
+        confirmColor="red"
+        icon="warning"
+      />
     </div>
   );
 }

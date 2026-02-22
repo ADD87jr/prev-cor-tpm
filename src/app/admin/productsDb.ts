@@ -108,7 +108,8 @@ export function deleteProduct(id: number) {
 export function decreaseStock(productId: number, quantity: number) {
   const idx = products.findIndex(p => p.id === productId);
   if (idx === -1) return false;
-  if (products[idx].stock < quantity) return false;
+  // Permite stoc negativ pentru produse pe comandă (onDemand)
+  if (!products[idx].onDemand && products[idx].stock < quantity) return false;
   products[idx].stock -= quantity;
   return true;
 }

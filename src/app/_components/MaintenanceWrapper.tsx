@@ -13,12 +13,13 @@ export default function MaintenanceWrapper({ children }: MaintenanceWrapperProps
   const { data: session } = useSession();
   const [isMaintenanceMode, setIsMaintenanceMode] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
 
   // Paths that should be excluded from maintenance mode
   const excludedPaths = ['/admin', '/api', '/maintenance'];
   const isExcluded = pathname ? excludedPaths.some(path => pathname.startsWith(path)) : false;
   
-  // Check if user is admin (based on session)
+  // Check if user is admin (based on NextAuth session)
   const isAdmin = session?.user?.email === 'office.prevcortpm@gmail.com' || 
                   (session?.user as any)?.isAdmin === true;
 
@@ -26,10 +27,20 @@ export default function MaintenanceWrapper({ children }: MaintenanceWrapperProps
     // Check maintenance status from API
     async function checkMaintenance() {
       try {
-        const res = await fetch('/api/maintenance-status', { cache: 'no-store' });
-        if (res.ok) {
-          const data = await res.json();
+        // Check both maintenance status and admin session in parallel
+        const [maintenanceRes, adminRes] = await Promise.all([
+          fetch('/api/maintenance-status', { cache: 'no-store' }),
+          fetch('/admin/api/verify-session', { cache: 'no-store', credentials: 'include' })
+        ]);
+        
+        if (maintenanceRes.ok) {
+          const data = await maintenanceRes.json();
           setIsMaintenanceMode(data.enabled === true);
+        }
+        
+        if (adminRes.ok) {
+          const adminData = await adminRes.json();
+          setIsAdminAuthenticated(adminData.valid === true);
         }
       } catch {
         // If API fails, continue normally
@@ -45,8 +56,8 @@ export default function MaintenanceWrapper({ children }: MaintenanceWrapperProps
     }
   }, [pathname, isExcluded]);
 
-  // Don't show maintenance page for excluded paths or admin users
-  if (isExcluded || isAdmin) {
+  // Don't show maintenance page for excluded paths, admin users, or authenticated admins
+  if (isExcluded || isAdmin || isAdminAuthenticated) {
     return <>{children}</>;
   }
 

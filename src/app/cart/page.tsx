@@ -64,6 +64,7 @@ function CartPageInner() {
     const [coupon, setCoupon] = useState("");
     const [couponStatus, setCouponStatus] = useState<any>(null);
     const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
+    const [showCouponField, setShowCouponField] = useState(false);
     const [paymentMethod, setPaymentMethod] = useState("card");
     const [pdfReady, setPdfReady] = useState(false);
     const [downloading, setDownloading] = useState(false);
@@ -86,11 +87,22 @@ function CartPageInner() {
     // rulează o singură dată la mount
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  
+  // Încarcă cuponul aplicat din items (la mount)
+  React.useEffect(() => {
+    const itemWithCoupon = items.find(i => i.appliedCoupon);
+    if (itemWithCoupon?.appliedCoupon && !appliedCoupon) {
+      setAppliedCoupon(itemWithCoupon.appliedCoupon);
+    }
+  }, [items, appliedCoupon]);
+  
   const { data: session } = useSession();
   // TVA configurabil din admin
   const [TVA_PERCENT, setTvaPercent] = useState(21);
   const [showOrderSuccess, setShowOrderSuccess] = useState(false);
   const [catalogProducts, setCatalogProducts] = useState<any[]>([]);
+  // Verifică dacă există produse pe comandă (onDemand) în coș
+  const [hasOnDemandProducts, setHasOnDemandProducts] = useState(false);
   
   // Încarcă TVA din setările admin
   React.useEffect(() => {
@@ -103,6 +115,45 @@ function CartPageInner() {
       })
       .catch(() => {});
   }, []);
+  
+  // Verifică onDemand din DB pentru produsele din coș
+  React.useEffect(() => {
+    const checkOnDemand = async () => {
+      if (!items || items.length === 0) {
+        setHasOnDemandProducts(false);
+        return;
+      }
+      
+      // Verifică direct din flag-urile din coș (dacă există)
+      const hasFromCart = items.some(item => item.onDemand === true);
+      if (hasFromCart) {
+        setHasOnDemandProducts(true);
+        // Schimbă metoda de plată dacă e ramburs
+        if (paymentMethod === 'ramburs' || paymentMethod === 'rate') setPaymentMethod('card');
+        return;
+      }
+      
+      // Fallback: verifică din API dacă coșul nu are flag-uri onDemand
+      try {
+        const productIds = [...new Set(items.map(item => item.id))];
+        const variantIds = items.filter(i => i.variantId).map(i => i.variantId);
+        const res = await fetch('/api/check-ondemand', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ productIds, variantIds })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setHasOnDemandProducts(data.hasOnDemand === true);
+          // Schimbă metoda de plată dacă e ramburs și sunt produse onDemand
+          if (data.hasOnDemand && (paymentMethod === 'ramburs' || paymentMethod === 'rate')) setPaymentMethod('card');
+        }
+      } catch (e) {
+        console.log('onDemand check failed:', e);
+      }
+    };
+    checkOnDemand();
+  }, [items, paymentMethod]);
 
   React.useEffect(() => {
     fetch('/api/products')
@@ -163,8 +214,7 @@ function CartPageInner() {
                   <th className="p-2">{txt.product}</th>
                   <th className="p-2">{txt.quantity}</th>
                   <th className="p-2">{txt.salePrice}</th>
-                  <th className="p-2">{txt.productDiscount}</th>
-                  <th className="p-2">{txt.couponDiscount}</th>
+                  {appliedCoupon && <th className="p-2">{txt.couponDiscount}</th>}
                   <th className="p-2">{txt.finalPrice}</th>
                   <th className="p-2">{txt.subtotal}</th>
                   <th></th>
@@ -174,20 +224,11 @@ function CartPageInner() {
                 {items.map((item, idx) => {
                   const catalogProduct = catalogProducts.find(p => p.id === item.id);
                   const price = catalogProduct ? catalogProduct.price : item.price;
-                  const discount = catalogProduct ? catalogProduct.discount : item.discount;
-                  const discountType = catalogProduct ? catalogProduct.discountType : undefined;
-                  let productDiscount = 0;
+                  const listPrice = catalogProduct?.listPrice;
+                  const discount = catalogProduct?.discount;
+                  const hasDiscount = listPrice && listPrice > price;
+                  // NU aplicăm discount suplimentar - prețul deja include reducerea
                   let priceAfterProductDiscount = price;
-                  if (typeof discount === "number" && discount > 0 && typeof discountType === "string") {
-                    if (discountType === "percent") {
-                      const percent = discount <= 1 ? discount * 100 : discount;
-                      productDiscount = price * (percent / 100);
-                    } else {
-                      productDiscount = discount;
-                    }
-                    priceAfterProductDiscount = price - productDiscount;
-                  }
-                  if (priceAfterProductDiscount < 0) priceAfterProductDiscount = 0;
                   let couponDiscount = 0;
                   let priceAfterCoupon = priceAfterProductDiscount;
                   let cuponToApply = appliedCoupon || item.appliedCoupon;
@@ -220,22 +261,28 @@ function CartPageInner() {
                           <button className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300" onClick={() => updateQuantity(item.id, item.quantity + 1, item.variantId)}>+</button>
                         </div>
                       </td>
-                      <td className="p-2">{price.toFixed(2)} RON</td>
                       <td className="p-2">
-                        {productDiscount > 0 ? (
-                          <span className="font-bold text-orange-700">-{productDiscount.toFixed(2)} RON</span>
-                        ) : (
-                          <span>-</span>
-                        )}
+                        <div className="flex flex-col">
+                          {hasDiscount && (
+                            <span className="text-sm text-gray-400 line-through">{listPrice.toFixed(2)} RON</span>
+                          )}
+                          <span className="font-semibold">{price.toFixed(2)} RON</span>
+                          {hasDiscount && discount && (
+                            <span className="text-xs text-green-600 font-medium">(-{discount}%)</span>
+                          )}
+                        </div>
                       </td>
-                      <td className="p-2">
-                        {couponDiscount > 0 ? (
-                          <span className="font-bold text-blue-700">-{couponDiscount.toFixed(2)} RON</span>
-                        ) : (
-                          <span>-</span>
-                        )}
-                      </td>
+                      {appliedCoupon && (
+                        <td className="p-2">
+                          {couponDiscount > 0 ? (
+                            <span className="font-bold text-blue-700">-{couponDiscount.toFixed(2)} RON</span>
+                          ) : (
+                            <span>-</span>
+                          )}
+                        </td>
+                      )}
                       <td className="p-2 font-bold text-green-700">{priceAfterCoupon.toFixed(2)} RON</td>
+                      <td className="p-2 font-semibold">{(priceAfterCoupon * item.quantity).toFixed(2)} RON</td>
                       <td className="p-2">
                         <button onClick={() => removeFromCart(item.id, item.variantId)} className="text-red-600 hover:underline">{txt.remove}</button>
                       </td>
@@ -248,48 +295,86 @@ function CartPageInner() {
           </div>
           <div className="border-t pt-4">
             <h2 className="font-bold mb-2">{txt.cartSummary}</h2>
-            <div className="mb-2 text-sm text-gray-700">{txt.haveCoupon} <span className="font-mono bg-gray-100 px-2 py-1 rounded">REDUCERE10</span></div>
-            <div className="flex flex-col md:flex-row gap-2 items-center mb-4">
-              <input
-                type="text"
-                value={coupon}
-                onChange={e => setCoupon(e.target.value)}
-                placeholder={txt.couponPlaceholder}
-                className="border rounded px-3 py-2 w-full md:w-64"
-              />
+            {/* Câmp cupon - expandabil */}
+            {!appliedCoupon && !showCouponField ? (
               <button
                 type="button"
-                className="bg-blue-600 text-white px-4 py-2 rounded font-semibold hover:bg-blue-700 transition"
-                onClick={() => {
-                  if (!coupon) {
-                    setCouponStatus({ success: false, message: txt.enterCoupon });
-                    return;
-                  }
-                  if (coupon === "REDUCERE10") {
-                    setCouponStatus({ success: true, message: `${txt.couponApplied} 10%!` });
-                    const couponData = { type: "percent", value: 10 };
-                    setAppliedCoupon(couponData);
-                    localStorage.setItem('cart_appliedCoupon', JSON.stringify(couponData));
-                    items.forEach(item => updateAppliedCoupon(item.id, couponData));
-                  } else if (coupon === "REDUCERE5") {
-                    setCouponStatus({ success: true, message: `${txt.couponApplied} 5 RON!` });
-                    const couponData = { type: "fixed", value: 5 };
-                    setAppliedCoupon(couponData);
-                    localStorage.setItem('cart_appliedCoupon', JSON.stringify(couponData));
-                    items.forEach(item => updateAppliedCoupon(item.id, couponData));
-                  } else {
-                    setCouponStatus({ success: false, message: txt.couponInvalid });
-                    setAppliedCoupon(null);
-                    localStorage.removeItem('cart_appliedCoupon');
-                    items.forEach(item => updateAppliedCoupon(item.id, null));
-                  }
-                }}
+                className="text-blue-600 hover:underline text-sm mb-4"
+                onClick={() => setShowCouponField(true)}
               >
-                {txt.applyCoupon}
+                {txt.haveCoupon}
               </button>
-            </div>
+            ) : !appliedCoupon ? (
+              <div className="flex flex-col md:flex-row gap-2 items-center mb-4">
+                <input
+                  type="text"
+                  value={coupon}
+                  onChange={e => setCoupon(e.target.value)}
+                  placeholder={txt.couponPlaceholder}
+                  className="border rounded px-3 py-2 w-full md:w-64"
+                />
+                <button
+                  type="button"
+                  className="bg-blue-600 text-white px-4 py-2 rounded font-semibold hover:bg-blue-700 transition"
+                  onClick={() => {
+                    if (!coupon) {
+                      setCouponStatus({ success: false, message: txt.enterCoupon });
+                      return;
+                    }
+                    if (coupon === "REDUCERE10") {
+                      setCouponStatus({ success: true, message: `${txt.couponApplied} 10%!` });
+                      const couponData = { type: "percent", value: 10 };
+                      setAppliedCoupon(couponData);
+                      localStorage.setItem('cart_appliedCoupon', JSON.stringify(couponData));
+                      items.forEach(item => updateAppliedCoupon(item.id, couponData));
+                    } else if (coupon === "REDUCERE5") {
+                      setCouponStatus({ success: true, message: `${txt.couponApplied} 5 RON!` });
+                      const couponData = { type: "fixed", value: 5 };
+                      setAppliedCoupon(couponData);
+                      localStorage.setItem('cart_appliedCoupon', JSON.stringify(couponData));
+                      items.forEach(item => updateAppliedCoupon(item.id, couponData));
+                    } else {
+                      setCouponStatus({ success: false, message: txt.couponInvalid });
+                      setAppliedCoupon(null);
+                      localStorage.removeItem('cart_appliedCoupon');
+                      items.forEach(item => updateAppliedCoupon(item.id, null));
+                    }
+                  }}
+                >
+                  {txt.applyCoupon}
+                </button>
+                <button
+                  type="button"
+                  className="text-gray-500 hover:text-gray-700 text-sm"
+                  onClick={() => setShowCouponField(false)}
+                >
+                  ✕
+                </button>
+              </div>
+            ) : null}
             {couponStatus && (
               <div className={`mb-4 text-sm font-semibold ${couponStatus.success ? 'text-green-700' : 'text-red-600'}`}>{couponStatus.message}</div>
+            )}
+            {/* Afișare cupon aplicat */}
+            {(appliedCoupon || items.some(i => i.appliedCoupon)) && (
+              <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded flex items-center justify-between">
+                <span className="text-green-700 font-semibold">
+                  ✓ Cupon aplicat: {appliedCoupon?.type === 'percent' ? `${appliedCoupon?.value}%` : appliedCoupon?.type === 'fixed' ? `${appliedCoupon?.value} RON` : 'activ'}
+                </span>
+                <button
+                  type="button"
+                  className="text-red-600 hover:text-red-800 font-semibold text-sm"
+                  onClick={() => {
+                    setAppliedCoupon(null);
+                    setCoupon('');
+                    setCouponStatus(null);
+                    localStorage.removeItem('cart_appliedCoupon');
+                    items.forEach(item => updateAppliedCoupon(item.id, null));
+                  }}
+                >
+                  ✕ Elimină cupon
+                </button>
+              </div>
             )}
             {language === "en" && (
               <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded text-sm text-blue-800">
@@ -297,9 +382,12 @@ function CartPageInner() {
               </div>
             )}
             <div className="font-bold text-right text-gray-900">{txt.subtotalSalePrice}: {subtotal.toFixed(2)} lei</div>
-            <div className="font-bold text-right text-orange-700">{txt.totalProductDiscount}: -{summary.totalProductDiscount.toFixed(2)} lei</div>
-            <div className="font-bold text-right text-blue-700">{txt.totalCouponDiscount}: -{summary.totalCouponDiscount.toFixed(2)} lei</div>
-            <div className="font-bold text-right text-green-700">{txt.subtotalAfterDiscounts}: {subtotalDupaReduceri.toFixed(2)} lei</div>
+            {summary.totalCouponDiscount > 0 && (
+              <div className="font-bold text-right text-blue-700">{txt.totalCouponDiscount}: -{summary.totalCouponDiscount.toFixed(2)} lei</div>
+            )}
+            {summary.totalCouponDiscount > 0 && (
+              <div className="font-bold text-right text-green-700">{txt.subtotalAfterDiscounts}: {subtotalDupaReduceri.toFixed(2)} lei</div>
+            )}
             <div className="font-bold text-right">{txt.courierCost}: {courierCost.toFixed(2)} lei
               {(() => {
                 switch (deliveryType) {
@@ -324,10 +412,15 @@ function CartPageInner() {
               <label className="font-medium">{txt.paymentMethod}:</label>
               <select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)} className="border rounded px-2 py-1">
                 <option value="card">{language === "en" ? "Card online" : "Card online"}</option>
-                <option value="ramburs">{language === "en" ? "Cash on delivery" : "Ramburs la livrare"}</option>
+                {!hasOnDemandProducts && <option value="ramburs">{language === "en" ? "Cash on delivery" : "Ramburs la livrare"}</option>}
                 <option value="transfer">{language === "en" ? "Bank transfer" : "Transfer bancar"}</option>
-                <option value="rate">{language === "en" ? "Installments" : "Plată în rate"}</option>
+                {!hasOnDemandProducts && <option value="rate">{language === "en" ? "Installments" : "Plată în rate"}</option>}
               </select>
+              {hasOnDemandProducts && (
+                <span className="ml-2 text-xs text-orange-600">
+                  {language === "en" ? "COD/Installments not available for on-demand products" : "Ramburs/Rate indisponibile pt. produse pe comandă"}
+                </span>
+              )}
             </div>
             <div className="flex gap-2 items-center mt-2">
               <label className="font-medium">{txt.delivery}:</label>

@@ -63,16 +63,10 @@ function PlataCardContent() {
       }
       // Transmit discountedPrice și tvaPercent la fel ca la checkout normal
       const items = (orderData.items || orderData.products || []).map((item: any) => {
-        // Calculează discountedPrice dacă există discount
+        // Prețul deja include reducerea de produs - nu aplicăm discount suplimentar
         let discountedPrice = item.discountPrice;
         if (typeof discountedPrice !== 'number') {
-          if (item.discountType === 'percent' && typeof item.discountPercent === 'number') {
-            discountedPrice = item.price * (1 - item.discountPercent / 100);
-          } else if (item.discountType === 'fixed' && typeof item.discount === 'number') {
-            discountedPrice = item.price - item.discount;
-          } else {
-            discountedPrice = item.price;
-          }
+          discountedPrice = item.price;
         }
         return { ...item, discountedPrice };
       });

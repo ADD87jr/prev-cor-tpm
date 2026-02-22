@@ -250,7 +250,7 @@ export default function ShopPage() {
     removeFromFavorites: language === "en" ? "Remove from favorites" : "Elimină din favorite",
     addToCompare: language === "en" ? "Compare product" : "Compară produsul",
     removeFromCompare: language === "en" ? "Remove from comparison" : "Elimină din comparație",
-    onDemand: language === "en" ? "On order" : "La comandă",
+    onDemand: language === "en" ? "On order" : "Pe comandă",
     availableOnDemand: language === "en" ? "Available on order" : "Disponibil pe comandă",
   };
 
@@ -641,17 +641,43 @@ export default function ShopPage() {
       ) : viewMode === 'grid' ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
           {pagedProducts.map((product) => {
-            const discountPercent = product.discountType === "percent"
-              ? (product.discount > 1 ? product.discount : product.discount * 100)
-              : product.discount;
-            const priceWithDiscount = product.discountType === "percent"
-              ? (product.price * (1 - discountPercent / 100)).toFixed(2)
-              : (product.price - product.discount).toFixed(2);
+            // Prioritate: preț din variante > preț produs
+            const useVariantPrices = product.hasVariants && product.minVariantPrice;
+            
+            let displayPrice: number;
+            let displayListPrice: number | null = null;
+            let calculatedDiscount = 0;
+            let showFromLabel = false;
+            
+            if (useVariantPrices) {
+              // Folosește prețul minim din variante
+              displayPrice = product.minVariantPrice;
+              displayListPrice = product.minVariantListPrice;
+              showFromLabel = true;
+              if (displayListPrice && displayListPrice > displayPrice) {
+                calculatedDiscount = Math.round((1 - displayPrice / displayListPrice) * 100);
+              }
+            } else {
+              // Folosește prețul produsului
+              displayPrice = product.price;
+              displayListPrice = product.listPrice;
+              const discountPercent = product.discountType === "percent"
+                ? (product.discount > 1 ? product.discount : product.discount * 100)
+                : 0;
+              if (discountPercent > 0) {
+                displayListPrice = product.price;
+                displayPrice = parseFloat((product.price * (1 - discountPercent / 100)).toFixed(2));
+                calculatedDiscount = Math.round(discountPercent);
+              } else if (product.listPrice && product.listPrice > product.price) {
+                calculatedDiscount = Math.round((1 - product.price / product.listPrice) * 100);
+              }
+            }
+            
             return (
               <div key={product.id} className="bg-gradient-to-br from-blue-50 via-white to-blue-100 border border-blue-200 rounded-2xl shadow-xl p-4 flex flex-col h-full relative group transition-transform duration-200 hover:scale-105 hover:shadow-2xl">
                 {/* Badge reduceri */}
-                {discountPercent > 0 && (
-                  <span className="absolute top-3 left-3 bg-red-600 text-white text-xs px-2 py-1 rounded-full z-10 shadow">-{Math.round(discountPercent)}%</span>
+                {calculatedDiscount > 0 && (
+                  <span className="absolute top-3 left-3 bg-red-600 text-white text-xs px-2 py-1 rounded-full z-10 shadow">-{calculatedDiscount}%</span>
                 )}
                 {/* Badge nou */}
                 {product.isNew && (
@@ -694,7 +720,17 @@ export default function ShopPage() {
                 </a>
                 <div className="flex flex-col items-center mt-auto">
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="text-blue-700 font-bold text-xl">{discountPercent > 0 ? <><span className='line-through text-gray-400 text-base mr-1'>{product.price} RON</span> <span>{priceWithDiscount} RON</span></> : <>{product.price} RON</>}</span>
+                    <span className="text-blue-700 font-bold text-xl">
+                      {showFromLabel && <span className="text-gray-500 text-sm font-normal mr-1">{language === "en" ? "from" : "de la"}</span>}
+                      {calculatedDiscount > 0 && displayListPrice ? (
+                        <>
+                          <span className="line-through text-gray-400 text-base mr-1">{displayListPrice.toFixed(2)} RON</span>
+                          <span>{displayPrice.toFixed(2)} RON</span>
+                        </>
+                      ) : (
+                        <>{displayPrice.toFixed(2)} RON</>
+                      )}
+                    </span>
                   </div>
                   {/* Eliminat afișarea codului de cupon */}
                   <button
@@ -702,21 +738,28 @@ export default function ShopPage() {
                     className="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition w-full mt-1 flex items-center justify-center gap-2"
                     onClick={e => {
                       e.stopPropagation();
+                      // Dacă are variante, redirecționează la pagina produsului
+                      if (product.hasVariants) {
+                        window.location.href = `/shop/${product.id}`;
+                        return;
+                      }
                       addToCart({
                         id: Number(product.id),
-                        name: product.name,                      nameEn: product.nameEn,                        listPrice: product.listPrice, // preț de vânzare (fără discount)
-                        price: product.price, // preț cu discount (din catalog)
-                        discount: product.discount ?? 0,
-                        discountType: product.discountType ?? 'percent',
-                        purchasePrice: product.purchasePrice, // preț de achiziție
-                        deliveryTime: product.deliveryTime
+                        name: product.name,
+                        nameEn: product.nameEn,
+                        listPrice: displayListPrice || displayPrice,
+                        price: displayPrice, // Prețul de vânzare (discount deja inclus)
+                        discount: product.discount ? Number(product.discount) : undefined,
+                        purchasePrice: product.purchasePrice,
+                        deliveryTime: product.deliveryTime,
+                        onDemand: product.onDemand || false
                       });
                       setAddedMsg(`${getProductName(product)} ${txt.addedToCart}`);
                       setTimeout(() => setAddedMsg(null), 2000);
                     }}
                     aria-label={`${txt.addToCart} ${getProductName(product)}`}
                   >
-                    <MdShoppingCart className="w-5 h-5" /> {txt.addToCart}
+                    <MdShoppingCart className="w-5 h-5" /> {product.hasVariants ? (language === "en" ? "Select variant" : "Selectează varianta") : txt.addToCart}
                   </button>
                   <div className="text-xs mt-2 text-gray-500 text-center">
                     <span>{product.onDemand ? <span className="text-orange-600 font-semibold">{txt.availableOnDemand}</span> : <>{txt.stock}: {typeof product.stock === "number" ? (product.stock > 0 ? product.stock : <span className="text-red-600 font-semibold">{txt.outOfStock}</span>) : "-"}</>}</span>
@@ -729,7 +772,38 @@ export default function ShopPage() {
         </div>
       ) : (
         <div className="flex flex-col gap-4">
-          {pagedProducts.map((product) => (
+          {pagedProducts.map((product) => {
+            // Prioritate: preț din variante > preț produs (pentru list view)
+            const useVariantPricesL = product.hasVariants && product.minVariantPrice;
+            
+            let displayPriceL: number;
+            let displayListPriceL: number | null = null;
+            let calculatedDiscountL = 0;
+            let showFromLabelL = false;
+            
+            if (useVariantPricesL) {
+              displayPriceL = product.minVariantPrice;
+              displayListPriceL = product.minVariantListPrice;
+              showFromLabelL = true;
+              if (displayListPriceL && displayListPriceL > displayPriceL) {
+                calculatedDiscountL = Math.round((1 - displayPriceL / displayListPriceL) * 100);
+              }
+            } else {
+              displayPriceL = product.price;
+              displayListPriceL = product.listPrice;
+              const discountPercentL = product.discountType === "percent"
+                ? (product.discount > 1 ? product.discount : product.discount * 100)
+                : 0;
+              if (discountPercentL > 0) {
+                displayListPriceL = product.price;
+                displayPriceL = parseFloat((product.price * (1 - discountPercentL / 100)).toFixed(2));
+                calculatedDiscountL = Math.round(discountPercentL);
+              } else if (product.listPrice && product.listPrice > product.price) {
+                calculatedDiscountL = Math.round((1 - product.price / product.listPrice) * 100);
+              }
+            }
+            
+            return (
             <div key={product.id} className="border rounded-2xl p-4 shadow-lg bg-white flex flex-row items-center gap-6 relative group">
               <button
                 className={`absolute top-3 right-3 z-10 rounded-full p-1 border-2 ${isInWishlist(product.id) ? 'bg-pink-100 border-pink-400 text-pink-600' : 'bg-white border-gray-300 text-gray-400 hover:bg-pink-50 hover:text-pink-500'}`}
@@ -752,6 +826,10 @@ export default function ShopPage() {
               {product.onDemand && (
                 <span className="absolute top-3 left-3 bg-orange-500 text-white text-xs px-2 py-1 rounded-full z-10 shadow">{txt.onDemand}</span>
               )}
+              {/* Badge discount - list view */}
+              {calculatedDiscountL > 0 && (
+                <span className="absolute top-10 left-3 bg-red-600 text-white text-xs px-2 py-1 rounded-full z-10 shadow">-{calculatedDiscountL}%</span>
+              )}
               <a href={`/shop/${product.id}`} aria-label={`${language === "en" ? "Details for" : "Detalii pentru"} ${getProductName(product)}`} className="w-32 h-24 flex-shrink-0 relative block focus:outline-none focus:ring-2 focus:ring-blue-500">
                 <Image src={(!product.image || (!product.image.startsWith('/products/') && !product.image.startsWith('/uploads/'))) ? '/products/default.jpg' : product.image} alt={getProductName(product)} fill className="object-contain rounded-xl" />
               </a>
@@ -764,7 +842,17 @@ export default function ShopPage() {
                   )}
                 </a>
                 <div className="flex items-center gap-2 mb-2 mt-1">
-                  <span className="text-blue-700 font-bold text-base">{product.discount > 0 ? <><span className='line-through text-gray-400 text-sm mr-1'>{product.price} RON</span> <span>{(product.price * (1 - product.discount / 100)).toFixed(2)} RON</span></> : <>{product.price} RON</>}</span>
+                  <span className="text-blue-700 font-bold text-base">
+                    {showFromLabelL && <span className="text-gray-500 text-sm font-normal mr-1">{language === "en" ? "from" : "de la"}</span>}
+                    {calculatedDiscountL > 0 && displayListPriceL ? (
+                      <>
+                        <span className="line-through text-gray-400 text-sm mr-1">{displayListPriceL.toFixed(2)} RON</span>
+                        <span>{displayPriceL.toFixed(2)} RON</span>
+                      </>
+                    ) : (
+                      <>{displayPriceL.toFixed(2)} RON</>
+                    )}
+                  </span>
                 </div>
                 {/* Eliminat afișarea codului de cupon din listă */}
                 <button
@@ -772,27 +860,26 @@ export default function ShopPage() {
                   className="bg-blue-600 text-white px-3 py-1 rounded-lg font-semibold hover:bg-blue-700 transition w-fit flex items-center justify-center gap-2 text-sm"
                   onClick={e => {
                     e.stopPropagation();
-                    const catalogProduct = products.find(p => p.id === product.id);
-                    const listPrice = catalogProduct ? catalogProduct.listPrice : product.listPrice;
-                    const priceWithDiscount = catalogProduct ? catalogProduct.price : product.price;
-                    const discount = catalogProduct ? catalogProduct.discount : product.discount;
+                    if (product.hasVariants) {
+                      window.location.href = `/shop/${product.id}`;
+                      return;
+                    }
                     addToCart({
                       id: product.id,
                       name: product.name,
                       nameEn: product.nameEn,
-                      listPrice: listPrice, // preț de vânzare (fără discount)
-                      price: priceWithDiscount, // preț cu discount
-                      discount: discount ?? 0,
-                      discountType: catalogProduct?.discountType ?? product.discountType ?? 'percent',
-                      coupon: product.couponCode ?? undefined,
-                      purchasePrice: product.purchasePrice
+                      listPrice: displayListPriceL || displayPriceL,
+                      price: displayPriceL, // Prețul de vânzare (discount deja inclus)
+                      discount: product.discount ? Number(product.discount) : undefined,
+                      purchasePrice: product.purchasePrice,
+                      onDemand: product.onDemand || false
                     });
                     setAddedMsg(`${getProductName(product)} ${txt.addedToCart}`);
                     setTimeout(() => setAddedMsg(null), 2000);
                   }}
                   aria-label={`${txt.addToCart} ${getProductName(product)}`}
                 >
-                  <MdShoppingCart className="w-4 h-4" /> {txt.addToCart}
+                  <MdShoppingCart className="w-4 h-4" /> {product.hasVariants ? (language === "en" ? "Select variant" : "Selectează varianta") : txt.addToCart}
                 </button>
                 <div className="text-xs mt-2 text-gray-500">
                   <span>{product.onDemand ? <span className="text-orange-600 font-semibold">{txt.availableOnDemand}</span> : <>{txt.stock}: {typeof product.stock === "number" ? (product.stock > 0 ? product.stock : <span className="text-red-600 font-semibold">{txt.outOfStock}</span>) : "-"}</>}</span>
@@ -800,7 +887,8 @@ export default function ShopPage() {
                 </div>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
       {/* Info rezultate și paginare */}

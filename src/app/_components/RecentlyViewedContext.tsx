@@ -16,6 +16,7 @@ interface RecentlyViewedContextType {
   viewedProducts: ViewedProduct[];
   addViewed: (product: Omit<ViewedProduct, "viewedAt">) => void;
   clearViewed: () => void;
+  updateProductPrices: (priceMap: Record<number, number>) => void;
 }
 
 const RecentlyViewedContext = createContext<RecentlyViewedContextType | undefined>(undefined);
@@ -60,8 +61,20 @@ export function RecentlyViewedProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem("recentlyViewed");
   }, []);
 
+  const updateProductPrices = useCallback((priceMap: Record<number, number>) => {
+    setViewedProducts(prev => {
+      const updated = prev.map(p => {
+        if (priceMap[p.id] !== undefined) {
+          return { ...p, price: priceMap[p.id] };
+        }
+        return p;
+      });
+      return updated;
+    });
+  }, []);
+
   return (
-    <RecentlyViewedContext.Provider value={{ viewedProducts, addViewed, clearViewed }}>
+    <RecentlyViewedContext.Provider value={{ viewedProducts, addViewed, clearViewed, updateProductPrices }}>
       {children}
     </RecentlyViewedContext.Provider>
   );

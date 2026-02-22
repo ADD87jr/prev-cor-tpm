@@ -30,21 +30,12 @@ export async function POST(req: Request) {
     }));
     // Obține stacking logic pentru fiecare produs
     const summary = calculateCartSummary({ products: productsRaw });
-    // Reconstruiește array-ul de produse cu stacking logic pe fiecare rând
+    // Reconstruiește array-ul de produse - NU aplicăm discount suplimentar, prețul include deja reducerea
     const products = productsRaw.map((item) => {
+      // Prețul deja include reducerea de produs
       let priceAfterProductDiscount = item.price;
       let productDiscount = 0;
-      // Tratează discount > 0 ca procent by default dacă discountType lipsește
-      if (typeof item.discount === 'number' && item.discount > 0) {
-        if (item.discountType === 'percent' || !item.discountType) {
-          const percent = item.discount <= 1 ? item.discount * 100 : item.discount;
-          productDiscount = item.price * (percent / 100);
-        } else {
-          productDiscount = item.discount;
-        }
-        priceAfterProductDiscount = item.price - productDiscount;
-      }
-      if (priceAfterProductDiscount < 0) priceAfterProductDiscount = 0;
+      
       let couponDiscount = 0;
       let priceAfterCoupon = priceAfterProductDiscount;
       if (item.appliedCoupon) {
@@ -123,10 +114,12 @@ export async function POST(req: Request) {
         pass: process.env.SMTP_PASS || "password"
       }
     });
+    // Generează un ID unic bazat pe timestamp pentru subiect (dacă nu avem orderId)
+    const orderRef = data.orderId || Date.now();
     const mailOptions = {
       from: `Magazin PREV-COR TPM <${process.env.SMTP_USER || "user@example.com"}>`,
       to: email,
-      subject: "Confirmare comandă PREV-COR TPM",
+      subject: `Confirmare comandă #${orderRef} - PREV-COR TPM`,
       html: emailHtml
     };
     try {

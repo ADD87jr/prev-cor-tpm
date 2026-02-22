@@ -16,6 +16,7 @@ export async function GET(req: NextRequest) {
     // Include explicit toate câmpurile de traducere
     const productsWithListPrice = products.map((p: any) => ({
       ...p,
+      productCode: p.sku || null, // Map sku to productCode for frontend compatibility
       listPrice: typeof p.listPrice === 'number' ? p.listPrice : p.price,
       nameEn: p.nameEn || null,
       descriptionEn: p.descriptionEn || null,
@@ -209,15 +210,28 @@ export async function DELETE(req: NextRequest) {
   if (authError) return authError;
 
   try {
-    const { id } = await req.json();
-    const product = await prisma.product.findUnique({ where: { id } });
-    await prisma.product.delete({ where: { id } });
+    // Suportă id din query string sau body JSON
+    const url = new URL(req.url);
+    let id = url.searchParams.get("id");
+    if (!id) {
+      const body = await req.json();
+      id = body.id;
+    }
+    if (!id) {
+      return NextResponse.json({ error: "ID produs lipsă!" }, { status: 400 });
+    }
+    const numericId = Number(id);
+    const product = await prisma.product.findUnique({ where: { id: numericId } });
+    if (!product) {
+      return NextResponse.json({ error: "Produsul nu există!" }, { status: 404 });
+    }
+    await prisma.product.delete({ where: { id: numericId } });
     // Log admin action
     await logAdminAction({
       action: 'DELETE',
       entity: 'product',
-      entityId: id,
-      details: product ? { name: product.name } : null,
+      entityId: numericId,
+      details: { name: product.name },
       adminEmail: 'admin' // TODO: get from session
     });
     return NextResponse.json({ success: true });

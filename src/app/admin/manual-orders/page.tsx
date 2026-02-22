@@ -1,11 +1,13 @@
 "use client";
 import Link from "next/link";
 import * as React from "react";
+import ConfirmModal from "@/components/ConfirmModal";
 
 export default function ManualOrdersPage() {
   const [orders, setOrders] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [defaultTva, setDefaultTva] = React.useState(19);
+  const [deleteOrderId, setDeleteOrderId] = React.useState<number | null>(null);
   
   // Încarcă TVA configurat din admin
   React.useEffect(() => {
@@ -123,12 +125,7 @@ export default function ManualOrdersPage() {
                         <button
                           className="bg-red-100 text-red-700 px-2 py-1 rounded font-bold hover:bg-red-200"
                           title="Șterge comanda"
-                          onClick={async () => {
-                            if (window.confirm('Sigur dorești să ștergi această comandă?')) {
-                              await fetch(`/admin/manual-orders/api?id=${order.id}`, { method: 'DELETE' });
-                              setOrders(orders => orders.filter(o => o.id !== order.id));
-                            }
-                          }}
+                          onClick={() => setDeleteOrderId(order.id)}
                         >✕</button>
                       </td>
                     </tr>
@@ -138,6 +135,25 @@ export default function ManualOrdersPage() {
             </tbody>
           </table>
         )}
+
+        {/* Modal confirmare ștergere comandă */}
+        <ConfirmModal
+          isOpen={deleteOrderId !== null}
+          title="Ștergere comandă"
+          message="Sigur dorești să ștergi această comandă manuală? Acțiunea este ireversibilă."
+          confirmText="Da, șterge"
+          cancelText="Anulează"
+          confirmColor="red"
+          icon="danger"
+          onConfirm={async () => {
+            if (deleteOrderId) {
+              await fetch(`/admin/manual-orders/api?id=${deleteOrderId}`, { method: 'DELETE' });
+              setOrders(orders => orders.filter(o => o.id !== deleteOrderId));
+            }
+            setDeleteOrderId(null);
+          }}
+          onCancel={() => setDeleteOrderId(null)}
+        />
       </div>
     </main>
   );

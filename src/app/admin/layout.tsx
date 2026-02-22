@@ -6,7 +6,6 @@ import AdminNav from "../components/AdminNav";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const [isAuthed, setIsAuthed] = useState<boolean | null>(null);
-  const [checked, setChecked] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
 
@@ -17,13 +16,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     // Pentru pagina de login, nu verificăm autentificarea
     if (isMainAdminPage) {
       setIsAuthed(false);
-      setChecked(true);
       return;
     }
 
-    // Verifică sesiunea
-    if (checked) return;
-
+    // Verifică sesiunea la fiecare schimbare de pagină
     const checkAuth = async () => {
       try {
         const res = await fetch("/admin/api/auth", {
@@ -35,27 +31,23 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           const data = await res.json();
           setIsAuthed(data.authenticated === true);
         } else {
-          // Sesiune invalidă - seterge cookie-urile și redirectează
-          await fetch("/admin/api/auth", { method: "DELETE" }).catch(() => {});
-          await fetch("/api/clear-session").catch(() => {});
           setIsAuthed(false);
         }
       } catch (err) {
         console.error("[ADMIN AUTH CHECK] Error:", err);
         setIsAuthed(false);
       }
-      setChecked(true);
     };
 
     checkAuth();
-  }, [isMainAdminPage, checked]);
+  }, [isMainAdminPage, pathname]);
 
   // Redirect dacă nu e autentificat
   useEffect(() => {
-    if (checked && isAuthed === false && !isMainAdminPage) {
+    if (isAuthed === false && !isMainAdminPage) {
       router.replace('/admin');
     }
-  }, [checked, isAuthed, isMainAdminPage, router]);
+  }, [isAuthed, isMainAdminPage, router]);
 
   // Pentru pagina de login, afișăm direct conținutul
   if (isMainAdminPage) {
@@ -67,7 +59,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   // Loading state
-  if (!checked || isAuthed === null) {
+  if (isAuthed === null) {
     return (
       <section className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="text-gray-500">Se încarcă...</div>

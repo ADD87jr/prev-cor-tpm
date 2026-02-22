@@ -81,7 +81,7 @@ export default function AdminDashboardPage() {
   function normalizeItems(items: any[]) {
     return (items || [])
       .map(i => ({ id: i.id, name: (i.name || '').trim(), quantity: Number(i.quantity || i.qty || 1) }))
-      .sort((a, b) => (a.id || '').localeCompare(b.id || '') || a.name.localeCompare(b.name) || a.quantity - b.quantity);
+      .sort((a, b) => String(a.id || '').localeCompare(String(b.id || '')) || a.name.localeCompare(b.name) || a.quantity - b.quantity);
   }
   const groups = new Map<string, any[]>();
   for (const order of orders) {
@@ -310,9 +310,9 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* Alertă stoc mic */}
+      {/* Alertă stoc mic - exclude produsele "pe comandă" (onDemand) */}
       {(() => {
-        const lowStockProducts = products.filter((p: any) => typeof p.stock === 'number' && p.stock <= 5 && p.stock >= 0);
+        const lowStockProducts = products.filter((p: any) => typeof p.stock === 'number' && p.stock <= 5 && p.stock >= 0 && !p.onDemand);
         if (lowStockProducts.length === 0) return null;
         return (
           <div className="mb-6 bg-orange-50 border border-orange-200 rounded-xl p-4">

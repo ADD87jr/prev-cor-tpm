@@ -103,14 +103,30 @@ export async function POST(req: NextRequest) {
     if (!items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json({ success: false, error: 'Nu există produse pentru email.' }, { status: 200 });
     }
-    // Verificare stoc pentru fiecare produs
+    // Verificare stoc pentru fiecare produs/variantă (skip pentru produse pe comandă)
     const productIds = items.map((item: any) => item.id).filter(Boolean);
     const productsDb = await prisma.product.findMany({ where: { id: { in: productIds } } });
+    const variantIds = items.map((item: any) => item.variantId).filter(Boolean).map(Number);
+    const variantsDb = variantIds.length > 0 ? await prisma.productVariant.findMany({ where: { id: { in: variantIds } } }) : [];
     for (const item of items) {
       const dbProd = productsDb.find(p => p.id === item.id);
       const qty = Number(item.qty || item.quantity || 1);
-      if (!dbProd || typeof dbProd.stock !== 'number' || dbProd.stock < qty) {
-        return NextResponse.json({ success: false, error: `Stoc insuficient pentru produsul "${item.name || item.denumire || '-'}". Disponibil: ${dbProd ? dbProd.stock : 0}` }, { status: 400 });
+      const variantId = item.variantId ? Number(item.variantId) : null;
+      
+      if (variantId) {
+        // Verifică varianta
+        const dbVariant = variantsDb.find(v => v.id === variantId);
+        // Skip verificare stoc dacă varianta este pe comandă (onDemand)
+        if ((dbVariant as any)?.onDemand === true) continue;
+        if (!dbVariant || typeof dbVariant.stoc !== 'number' || dbVariant.stoc < qty) {
+          return NextResponse.json({ success: false, error: `Stoc insuficient pentru varianta "${item.variantCode || variantId}" a produsului "${item.name || item.denumire || '-'}". Disponibil: ${dbVariant ? dbVariant.stoc : 0}` }, { status: 400 });
+        }
+      } else {
+        // Skip verificare stoc dacă produsul este pe comandă (onDemand)
+        if (dbProd?.onDemand === true) continue;
+        if (!dbProd || typeof dbProd.stock !== 'number' || dbProd.stock < qty) {
+          return NextResponse.json({ success: false, error: `Stoc insuficient pentru produsul "${item.name || item.denumire || '-'}". Disponibil: ${dbProd ? dbProd.stock : 0}` }, { status: 400 });
+        }
       }
     }
     // Adresă și telefon din client - fallback robust pentru orice flux
@@ -150,23 +166,9 @@ export async function POST(req: NextRequest) {
     if (!telefon) telefon = '-';
     // Calcule sumare
     const subtotalPretVanzare = items.reduce((sum, item) => sum + (typeof item.price === 'number' ? item.price : 0) * (item.qty || item.quantity || 1), 0);
-    // Stacking: discount produs
-    const subtotalDupaProduseDiscount = items.reduce((sum, item) => {
-      const price = typeof item.price === 'number' ? item.price : 0;
-      let discount = typeof item.discount === 'number' ? item.discount : 0;
-      if (discount > 1 && discount <= 100) discount = discount / 100;
-      if (discount > 1) discount = 1;
-      if (discount < 0) discount = 0;
-      let priceWithDiscount = price;
-      if (item.discountType === 'percent' || (!item.discountType && discount > 0)) {
-        priceWithDiscount = price * (1 - discount);
-      } else if (item.discountType === 'fixed') {
-        priceWithDiscount = price - discount;
-      }
-      if (priceWithDiscount < 0) priceWithDiscount = 0;
-      return sum + priceWithDiscount * (item.qty || item.quantity || 1);
-    }, 0);
-    // Stacking: aplică cuponul peste subtotalul cu discount produs
+    // Prețul deja include reducerea de produs - nu aplicăm discount suplimentar
+    const subtotalDupaProduseDiscount = subtotalPretVanzare;
+    // Stacking: aplică cuponul peste subtotalul de vânzare
     const appliedCoupon = items[0]?.appliedCoupon || null;
     let subtotalDupaReduceri = subtotalDupaProduseDiscount;
     if (appliedCoupon) {
@@ -196,15 +198,18 @@ export async function POST(req: NextRequest) {
       frazaPlata = `<div style="background:#f3f4f6;padding:12px 18px;border-left:4px solid #2563eb;font-size:1.1rem;margin-bottom:18px;">${txt.paymentTransfer}</div>`;
     }
     // Folosește calculateCartSummary pentru stacking logic corect
-    // Map product nameEn from database for translation
+    // Map product nameEn și listPrice from database for translation
     const productNameEnMap = new Map(productsDb.map(p => [p.id, p.nameEn]));
-    const products: (CartSummaryProduct & { nameEn?: string | null; deliveryTime?: string; variantCode?: string; variantInfo?: string; productDiscountValue?: number; couponDiscountValue?: number })[] = (items || []).map((item: any) => ({
+    const productListPriceMap = new Map(productsDb.map(p => [p.id, p.listPrice]));
+    const productDiscountMap = new Map(productsDb.map(p => [p.id, p.discount]));
+    const products: (CartSummaryProduct & { nameEn?: string | null; deliveryTime?: string; variantCode?: string; variantInfo?: string; productDiscountValue?: number; couponDiscountValue?: number; listPrice?: number })[] = (items || []).map((item: any) => ({
       id: item.id,
       name: item.name,
       nameEn: productNameEnMap.get(Number(item.id)) || item.nameEn || null,
       price: item.price,
+      listPrice: item.listPrice || productListPriceMap.get(Number(item.id)) || null,
       quantity: item.quantity || item.qty || 1,
-      discount: item.discount,
+      discount: item.discount ?? productDiscountMap.get(Number(item.id)) ?? null,
       discountType: item.discountType,
       appliedCoupon: item.appliedCoupon || null,
       deliveryTime: item.deliveryTime || item.deliveryTerm || '-',
@@ -215,7 +220,14 @@ export async function POST(req: NextRequest) {
       couponDiscountValue: item.couponDiscount || null
     }));
     const summary = calculateCartSummary({ products });
-    const tableHeaders = [txt.headerNo, txt.headerProduct, txt.headerQty, txt.headerPrice, txt.headerProductDiscount, txt.headerCouponDiscount, txt.headerFinalPrice, txt.headerSubtotal, txt.headerDelivery];
+    
+    // Verifică dacă există cupoane
+    const hasCoupon = products.some(item => item.appliedCoupon || (typeof item.couponDiscountValue === 'number' && item.couponDiscountValue > 0));
+    
+    // Tabel simplificat - fără coloane de reducere produs (prețul include deja reducerea)
+    const tableHeaders = hasCoupon 
+      ? [txt.headerNo, txt.headerProduct, txt.headerQty, txt.headerPrice, txt.headerCouponDiscount, txt.headerFinalPrice, txt.headerSubtotal, txt.headerDelivery]
+      : [txt.headerNo, txt.headerProduct, txt.headerQty, txt.headerPrice, txt.headerSubtotal, txt.headerDelivery];
     let tableHtml = `<table style='width:100%;border-collapse:collapse;margin-bottom:16px;'>`;
     tableHtml += `<tr>` + tableHeaders.map(h => `<th style='border:1px solid #e5e7eb;padding:6px 8px;background:#f3f4f6;font-weight:600;'>${h}</th>`).join('') + `</tr>`;
     products.forEach((item, idx) => {
@@ -228,28 +240,28 @@ export async function POST(req: NextRequest) {
         productName = `${productName}<br/><span style='font-size:0.9em;color:#666;'>(${variantDetails.join(' - ')})</span>`;
       }
       
-      let priceAfterProductDiscount = item.price;
-      let productDiscount = 0;
+      // Verifică dacă există discount de produs (listPrice > price)
+      const hasProductDiscount = item.listPrice && item.listPrice > item.price;
       
-      // Folosește valoarea pre-calculată dacă există, altfel calculează
-      if (typeof item.productDiscountValue === 'number' && item.productDiscountValue > 0) {
-        productDiscount = item.productDiscountValue;
-        priceAfterProductDiscount = item.price - productDiscount;
-      } else if (typeof item.discount === 'number' && item.discount > 0) {
-        if (item.discountType === 'percent' || !item.discountType) {
-          const percent = item.discount <= 1 ? item.discount * 100 : item.discount;
-          productDiscount = item.price * (percent / 100);
-        } else {
-          productDiscount = item.discount;
+      // Construiește celula de preț cu discount afișat ca în coș
+      let priceCell = '';
+      if (hasProductDiscount) {
+        priceCell = `<span style='text-decoration:line-through;color:#9ca3af;font-size:0.9em;'>${item.listPrice!.toFixed(2)} ${txt.currencyUnit}</span><br/>` +
+          `<span style='font-weight:600;'>${item.price.toFixed(2)} ${txt.currencyUnit}</span>`;
+        if (item.discount && item.discount > 0) {
+          priceCell += `<br/><span style='color:#16a34a;font-size:0.85em;'>(-${item.discount}%)</span>`;
         }
-        priceAfterProductDiscount = item.price - productDiscount;
+      } else {
+        priceCell = `${item.price.toFixed(2)} ${txt.currencyUnit}`;
       }
-      if (priceAfterProductDiscount < 0) priceAfterProductDiscount = 0;
+      
+      // Prețul deja include reducerea de produs
+      const priceAfterProductDiscount = item.price;
       
       let couponDiscount = 0;
       let priceAfterCoupon = priceAfterProductDiscount;
       
-      // Folosește valoarea pre-calculată pentru cupon dacă există
+      // Calculează reducerea cupon doar dacă există
       if (typeof item.couponDiscountValue === 'number' && item.couponDiscountValue > 0) {
         couponDiscount = item.couponDiscountValue;
         priceAfterCoupon = priceAfterProductDiscount - couponDiscount;
@@ -269,26 +281,40 @@ export async function POST(req: NextRequest) {
       if (lang === 'en' && deliveryTermDisplay !== '-') {
         deliveryTermDisplay = deliveryTermDisplay.replace(/zile/gi, 'days').replace(/zi\b/gi, 'day');
       }
-      tableHtml += `<tr>` +
-        `<td style='border:1px solid #e5e7eb;padding:6px 8px;text-align:center;'>${idx + 1}</td>` +
-        `<td style='border:1px solid #e5e7eb;padding:6px 8px;'>${productName}</td>` +
-        `<td style='border:1px solid #e5e7eb;padding:6px 8px;text-align:center;'>${item.quantity.toFixed(3)}</td>` +
-        `<td style='border:1px solid #e5e7eb;padding:6px 8px;text-align:right;'>${item.price.toFixed(2)} ${txt.currencyUnit}</td>` +
-        `<td style='border:1px solid #e5e7eb;padding:6px 8px;text-align:right;'>${productDiscount > 0 ? '-' + productDiscount.toFixed(2) + ' ' + txt.currencyUnit : '-'}</td>` +
-        `<td style='border:1px solid #e5e7eb;padding:6px 8px;text-align:right;'>${couponDiscount > 0 ? '-' + couponDiscount.toFixed(2) + ' ' + txt.currencyUnit : '-'}</td>` +
-        `<td style='border:1px solid #e5e7eb;padding:6px 8px;text-align:right;'>${priceAfterCoupon.toFixed(2)} ${txt.currencyUnit}</td>` +
-        `<td style='border:1px solid #e5e7eb;padding:6px 8px;text-align:right;'>${subtotalFinal.toFixed(2)} ${txt.currencyUnit}</td>` +
-        `<td style='border:1px solid #e5e7eb;padding:6px 8px;text-align:center;'>${deliveryTermDisplay}</td>` +
-        `</tr>`;
+      
+      if (hasCoupon) {
+        tableHtml += `<tr>` +
+          `<td style='border:1px solid #e5e7eb;padding:6px 8px;text-align:center;'>${idx + 1}</td>` +
+          `<td style='border:1px solid #e5e7eb;padding:6px 8px;'>${productName}</td>` +
+          `<td style='border:1px solid #e5e7eb;padding:6px 8px;text-align:center;'>${item.quantity.toFixed(3)}</td>` +
+          `<td style='border:1px solid #e5e7eb;padding:6px 8px;text-align:right;'>${priceCell}</td>` +
+          `<td style='border:1px solid #e5e7eb;padding:6px 8px;text-align:right;color:#2563eb;'>${couponDiscount > 0 ? '-' + couponDiscount.toFixed(2) + ' ' + txt.currencyUnit : '-'}</td>` +
+          `<td style='border:1px solid #e5e7eb;padding:6px 8px;text-align:right;'>${priceAfterCoupon.toFixed(2)} ${txt.currencyUnit}</td>` +
+          `<td style='border:1px solid #e5e7eb;padding:6px 8px;text-align:right;'>${subtotalFinal.toFixed(2)} ${txt.currencyUnit}</td>` +
+          `<td style='border:1px solid #e5e7eb;padding:6px 8px;text-align:center;'>${deliveryTermDisplay}</td>` +
+          `</tr>`;
+      } else {
+        tableHtml += `<tr>` +
+          `<td style='border:1px solid #e5e7eb;padding:6px 8px;text-align:center;'>${idx + 1}</td>` +
+          `<td style='border:1px solid #e5e7eb;padding:6px 8px;'>${productName}</td>` +
+          `<td style='border:1px solid #e5e7eb;padding:6px 8px;text-align:center;'>${item.quantity.toFixed(3)}</td>` +
+          `<td style='border:1px solid #e5e7eb;padding:6px 8px;text-align:right;'>${priceCell}</td>` +
+          `<td style='border:1px solid #e5e7eb;padding:6px 8px;text-align:right;'>${subtotalFinal.toFixed(2)} ${txt.currencyUnit}</td>` +
+          `<td style='border:1px solid #e5e7eb;padding:6px 8px;text-align:center;'>${deliveryTermDisplay}</td>` +
+          `</tr>`;
+      }
     });
     tableHtml += `</table>`;
     // Sumar comanda - adresa și telefonul apar pentru orice metodă de plată
     const paymentMethodDisplay = payMethodNorm === 'ramburs' ? txt.paymentCashOnDelivery : payMethodNorm === 'card' || payMethodNorm === 'card online' ? txt.paymentCardOnline : payMethodNorm === 'rate' || payMethodNorm === 'plata in rate' || payMethodNorm === 'plată în rate' ? txt.paymentInstallments : payMethodNorm === 'transfer' || payMethodNorm === 'transfer bancar' ? txt.paymentBankTransfer : paymentMethod;
-    let sumarHtml = `
-      <div style='margin-bottom:8px;'>${txt.subtotalLabel}: <b>${summary.subtotal.toFixed(2)}</b> ${txt.currencyUnit}</div>
-      <div style='margin-bottom:8px;color:#ea580c;'>${txt.totalProductDiscount}: <b>-${summary.totalProductDiscount.toFixed(2)}</b> ${txt.currencyUnit}</div>
-      <div style='margin-bottom:8px;color:#2563eb;'>${txt.totalCouponDiscount}: <b>-${summary.totalCouponDiscount.toFixed(2)}</b> ${txt.currencyUnit}</div>
-      <div style='margin-bottom:8px;color:green;'>${txt.subtotalAfterDiscounts}: <b>${summary.subtotalDupaReduceri.toFixed(2)}</b> ${txt.currencyUnit}</div>
+    
+    // Sumar simplificat - fără linii de reducere când sunt 0
+    let sumarHtml = `<div style='margin-bottom:8px;'>${txt.subtotalLabel}: <b>${summary.subtotal.toFixed(2)}</b> ${txt.currencyUnit}</div>`;
+    if (summary.totalCouponDiscount > 0) {
+      sumarHtml += `<div style='margin-bottom:8px;color:#2563eb;'>${txt.totalCouponDiscount}: <b>-${summary.totalCouponDiscount.toFixed(2)}</b> ${txt.currencyUnit}</div>`;
+      sumarHtml += `<div style='margin-bottom:8px;color:green;'>${txt.subtotalAfterDiscounts}: <b>${summary.subtotalDupaReduceri.toFixed(2)}</b> ${txt.currencyUnit}</div>`;
+    }
+    sumarHtml += `
       <div style='margin-bottom:8px;'>${txt.courierCostLabel} (${deliveryType || ''}): <b>${summary.courierCost.toFixed(2)}</b> ${txt.currencyUnit}</div>
       <div style='margin-bottom:8px;'>${txt.paymentMethodLabel}: <b>${paymentMethodDisplay}</b></div>
       <div style='margin-bottom:8px;'>${txt.totalWithoutVAT}: <b>${summary.totalFaraTVA.toFixed(2)}</b> ${txt.currencyUnit}</div>
@@ -392,33 +418,47 @@ export async function POST(req: NextRequest) {
           if (variantId) {
             // Scade stocul din varianta selectată
             const variant = await tx.productVariant.findUnique({ where: { id: variantId } });
-            if (!variant || typeof variant.stoc !== 'number' || variant.stoc < qty) {
+            // Skip verificare stoc dacă varianta este pe comandă (onDemand)
+            const isOnDemand = (variant as any)?.onDemand === true;
+            if (!isOnDemand && (!variant || typeof variant.stoc !== 'number' || variant.stoc < qty)) {
               throw new Error(`Stoc insuficient pentru varianta "${item.variantCode || variantId}" a produsului "${item.name || item.denumire || '-'}". Disponibil: ${variant ? variant.stoc : 0}`);
             }
-            const updatedVariant = await tx.productVariant.update({
-              where: { id: variantId, stoc: { gte: qty } },
-              data: { stoc: { decrement: qty } }
-            });
-            console.log('[DEBUG] Stoc variantă actualizat:', {
-              variantId: updatedVariant.id,
-              code: updatedVariant.code,
-              stoc_nou: updatedVariant.stoc
-            });
+            // Pentru onDemand, NU decrementăm stocul (nu există stoc fizic)
+            if (!isOnDemand) {
+              const updatedVariant = await tx.productVariant.update({
+                where: { id: variantId },
+                data: { stoc: { decrement: qty } }
+              });
+              console.log('[DEBUG] Stoc variantă actualizat:', {
+                variantId: updatedVariant.id,
+                code: updatedVariant.code,
+                stoc_nou: updatedVariant.stoc
+              });
+            } else {
+              console.log('[DEBUG] Variantă onDemand - stoc nedecremantat:', variantId);
+            }
           } else {
             // Scade stocul din produsul principal (fără variante)
             const prod = await tx.product.findUnique({ where: { id: Number(item.id) } });
-            if (!prod || typeof prod.stock !== 'number' || prod.stock < qty) {
+            // Skip verificare stoc dacă produsul este pe comandă (onDemand)
+            const isOnDemand = prod?.onDemand === true;
+            if (!isOnDemand && (!prod || typeof prod.stock !== 'number' || prod.stock < qty)) {
               throw new Error(`Stoc insuficient pentru produsul "${item.name || item.denumire || '-'}". Disponibil: ${prod ? prod.stock : 0}`);
             }
-            const updatedProduct = await tx.product.update({
-              where: { id: Number(item.id), stock: { gte: qty } },
-              data: { stock: { decrement: qty } }
-            });
-            console.log('[DEBUG] Stoc produs actualizat:', {
-              id: updatedProduct.id,
-              nume: updatedProduct.name,
-              stoc_nou: updatedProduct.stock
-            });
+            // Pentru onDemand, NU decrementăm stocul (nu există stoc fizic)
+            if (!isOnDemand) {
+              const updatedProduct = await tx.product.update({
+                where: { id: Number(item.id) },
+                data: { stock: { decrement: qty } }
+              });
+              console.log('[DEBUG] Stoc produs actualizat:', {
+                id: updatedProduct.id,
+                nume: updatedProduct.name,
+                stoc_nou: updatedProduct.stock
+              });
+            } else {
+              console.log('[DEBUG] Produs onDemand - stoc nedecremantat:', item.id);
+            }
           }
         } else {
           console.warn('[WARN] Item fără id sau qty/quantity:', item);
@@ -502,10 +542,16 @@ export async function POST(req: NextRequest) {
     
     const pdfFilename = lang === 'en' ? `order-confirmation-${Date.now()}.pdf` : `confirmare-comanda-${Date.now()}.pdf`;
     
+    // Subiect cu număr comandă pentru a nu fi grupate în Gmail
+    const orderNumber = orderRecord?.number || orderRecord?.id || Date.now();
+    const emailSubject = lang === 'en' 
+      ? `Order confirmation #${orderNumber} - PREV-COR TPM`
+      : `Confirmare comandă #${orderNumber} - PREV-COR TPM`;
+    
     // Send email with or without PDF attachment
     const emailOptions: Parameters<typeof sendEmail>[0] = {
       to: userEmail,
-      subject,
+      subject: emailSubject,
       text,
       html,
     };

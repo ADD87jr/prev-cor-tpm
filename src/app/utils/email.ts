@@ -1,6 +1,9 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Inițializare Resend doar dacă avem API key (pentru dezvoltare locală fără email)
+const resend = process.env.RESEND_API_KEY 
+  ? new Resend(process.env.RESEND_API_KEY) 
+  : null;
 
 export async function sendEmail({ to, subject, text, html, attachments }: {
   to: string;
@@ -10,6 +13,12 @@ export async function sendEmail({ to, subject, text, html, attachments }: {
   attachments?: { filename: string; content: Buffer }[];
 }) {
   try {
+    // Skip email sending in development if no API key
+    if (!resend) {
+      console.log('[EMAIL] Skipping email (no RESEND_API_KEY):', { to, subject });
+      return { id: 'dev-skipped', message: 'Email skipped in development' };
+    }
+
     const fromEmail = process.env.EMAIL_FROM || 'office@prevcortpm.ro';
     const fromName = process.env.EMAIL_FROM_NAME || 'Prev-Cor TPM';
     

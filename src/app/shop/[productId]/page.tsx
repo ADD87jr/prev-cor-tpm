@@ -83,6 +83,8 @@ export default function ProductDetail({ params }: { params: Promise<{ productId:
   const [productVariants, setProductVariants] = useState<any[]>([]);
   const [variantsLoading, setVariantsLoading] = useState(false);
   const [selectedDbVariant, setSelectedDbVariant] = useState<any | null>(null); // varianta selectată din DB
+  const [selectedDbVariants, setSelectedDbVariants] = useState<any[]>([]); // variantele selectate pentru coș (multi-select)
+  const viewedAddedRef = React.useRef(false); // track if product was added to recently viewed
   
   const txt = {
     loading: language === "en" ? "Loading..." : "Se încarcă...",
@@ -129,8 +131,23 @@ export default function ProductDetail({ params }: { params: Promise<{ productId:
     selectedVariant: language === "en" ? "Selected variant" : "Varianta selectată",
     variantRequired: language === "en" ? "Please select a variant" : "Te rugăm să selectezi o variantă",
     clearSelection: language === "en" ? "Clear selection" : "Anulează selecția",
-    onDemand: language === "en" ? "On order" : "La comandă",
+    selectAll: language === "en" ? "Select all" : "Selectează toate",
+    deselectAll: language === "en" ? "Deselect all" : "Deselectează",
+    variantsSelected: language === "en" ? "variants selected" : "variante selectate",
+    onDemand: language === "en" ? "On order" : "Pe comandă",
     availableOnDemand: language === "en" ? "Available on order" : "Disponibil pe comandă",
+    fromPrice: language === "en" ? "from" : "de la",
+    // Câmpuri tehnice variante
+    variantDetails: language === "en" ? "Variant Technical Details" : "Detalii Tehnice Variantă",
+    sizeLabel: language === "en" ? "Size" : "Mărime",
+    detectionDistance: language === "en" ? "Detection distance" : "Distanță sesizare",
+    outputType: language === "en" ? "Output type" : "Tip ieșire",
+    contactType: language === "en" ? "Contact type" : "Tip contact",
+    voltage: language === "en" ? "Voltage" : "Tensiune",
+    current: language === "en" ? "Current" : "Curent",
+    protection: language === "en" ? "Protection class" : "Clasă protecție",
+    material: language === "en" ? "Material" : "Material",
+    cable: language === "en" ? "Cable" : "Cablu",
   };
 
   // Funcții helper pentru traducerea produselor
@@ -161,6 +178,7 @@ export default function ProductDetail({ params }: { params: Promise<{ productId:
 
   useEffect(() => {
     setLoading(true);
+    viewedAddedRef.current = false; // Reset when product changes
     fetch(`/admin/api/products`)
       .then(res => res.json())
       .then(data => {
@@ -175,16 +193,17 @@ export default function ProductDetail({ params }: { params: Promise<{ productId:
       .finally(() => setLoading(false));
   }, [actualParams.productId]);
 
-  // Track viewed product
+  // Track viewed product - simple save, prices are updated by RecentlyViewed component from API
   useEffect(() => {
-    if (product) {
+    if (product && !viewedAddedRef.current) {
+      viewedAddedRef.current = true;
       addViewed({
         id: product.id,
         name: product.name,
         nameEn: product.nameEn || undefined,
         slug: product.id.toString(),
         image: product.image || '/products/default.jpg',
-        price: product.price,
+        price: product.price, // Will be updated by RecentlyViewed API call
       });
     }
   }, [product, addViewed]);
@@ -228,40 +247,64 @@ export default function ProductDetail({ params }: { params: Promise<{ productId:
   function handleAdd() {
     if (!product) return;
     
-    // Dacă produsul are variante în DB, trebuie selectată una
+    // Dacă produsul are variante în DB
     if (productVariants.length > 0) {
-      if (!selectedDbVariant) {
+      // Multi-select: adaugă toate variantele selectate
+      if (selectedDbVariants.length > 0) {
+        selectedDbVariants.forEach(variant => {
+          const variantPrice = variant.pret ?? product.price;
+          const variantListPrice = variant.listPrice ?? product.listPrice;
+          addToCart({ 
+            id: product.id, 
+            name: product.name, 
+            nameEn: product.nameEn, 
+            price: Number(variantPrice), // Prețul de vânzare (discount deja inclus)
+            listPrice: variantListPrice ? Number(variantListPrice) : undefined,
+            discount: product.discount ? Number(product.discount) : undefined,
+            purchasePrice: product.purchasePrice ?? variantPrice,
+            deliveryTime: product.deliveryTime,
+            variantId: variant.id,
+            variantCode: variant.code,
+            variantInfo: variant.compatibil || variant.descriere || '',
+            onDemand: (variant as any).onDemand || product.onDemand || false
+          });
+        });
+        setSelectedDbVariants([]); // Reset selecția
+        setSelectedDbVariant(null);
+      } else if (selectedDbVariant) {
+        // Fallback: o singură variantă selectată
+        const variantPrice = selectedDbVariant.pret ?? product.price;
+        const variantListPrice = selectedDbVariant.listPrice ?? product.listPrice;
+        addToCart({ 
+          id: product.id, 
+          name: product.name, 
+          nameEn: product.nameEn, 
+          price: Number(variantPrice), // Prețul de vânzare (discount deja inclus)
+          listPrice: variantListPrice ? Number(variantListPrice) : undefined,
+          discount: product.discount ? Number(product.discount) : undefined,
+          purchasePrice: product.purchasePrice ?? variantPrice,
+          deliveryTime: product.deliveryTime,
+          variantId: selectedDbVariant.id,
+          variantCode: selectedDbVariant.code,
+          variantInfo: selectedDbVariant.compatibil || selectedDbVariant.descriere || '',
+          onDemand: (selectedDbVariant as any).onDemand || product.onDemand || false
+        });
+      } else {
         alert(txt.variantRequired);
         return;
       }
-      // Adaugă cu varianta selectată
-      const variantPrice = selectedDbVariant.pret ?? product.price;
-      addToCart({ 
-        id: product.id, 
-        name: product.name, 
-        nameEn: product.nameEn, 
-        price: Number(variantPrice), 
-        purchasePrice: product.purchasePrice ?? variantPrice,
-        deliveryTime: product.deliveryTime,
-        variantId: selectedDbVariant.id,
-        variantCode: selectedDbVariant.code,
-        variantInfo: selectedDbVariant.compatibil || selectedDbVariant.descriere || '',
-        // Transmite și discount-ul produsului
-        discount: product.discount || 0,
-        discountType: product.discountType || 'percent'
-      });
     } else {
       // Produs fără variante - comportament normal
       addToCart({ 
         id: product.id, 
         name: product.name, 
         nameEn: product.nameEn, 
-        price: Number(product.price), 
+        price: Number(product.price), // Prețul de vânzare (discount deja inclus)
+        listPrice: product.listPrice ? Number(product.listPrice) : undefined,
+        discount: product.discount ? Number(product.discount) : undefined,
         purchasePrice: product.purchasePrice, 
         deliveryTime: product.deliveryTime,
-        // Transmite și discount-ul produsului
-        discount: product.discount || 0,
-        discountType: product.discountType || 'percent'
+        onDemand: product.onDemand || false
       });
     }
     setAdded(true);
@@ -311,34 +354,103 @@ export default function ProductDetail({ params }: { params: Promise<{ productId:
               <div className="mb-2 text-sm text-gray-500 font-mono">{txt.productCode} {product.sku}</div>
             )}
             <div className="mb-2 text-lg text-gray-700">{getProductDescription(product)}</div>
-            {/* Badge la comandă */}
-            {product.onDemand && (
-              <div className="mb-2">
-                <span className="bg-orange-500 text-white px-3 py-1 rounded-full text-sm font-semibold">{txt.onDemand}</span>
-              </div>
-            )}
             {/* Preț cu discount */}
-            {discountPercent > 0 ? (
-              <div className="mb-2">
-                <span className="line-through text-gray-400 text-lg mr-2">{product.price} RON</span>
-                <span className="font-bold text-2xl text-green-700 mr-2">{priceWithDiscount} RON</span>
-                <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-sm font-semibold">-{discountPercent}%</span>
-              </div>
-            ) : product.discount && product.discountType === "fixed" ? (
-              <div className="mb-2">
-                <span className="line-through text-gray-400 text-lg mr-2">{product.price} RON</span>
-                <span className="font-bold text-2xl text-green-700 mr-2">{priceWithDiscount} RON</span>
-                <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-sm font-semibold">-{product.discount} RON</span>
-              </div>
-            ) : (
-              <div className="font-bold text-2xl mb-2">{product.price} RON</div>
-            )}
+            {(() => {
+              // Dacă e selectată o variantă cu prețuri
+              if (selectedDbVariant) {
+                const vListPrice = selectedDbVariant.listPrice;
+                const vPrice = selectedDbVariant.pret;
+                
+                // Dacă varianta are preț de listă și preț de vânzare
+                if (vListPrice && vPrice && vListPrice > vPrice) {
+                  const exactDiscount = (1 - vPrice / vListPrice) * 100;
+                  const variantDiscount = Number.isInteger(exactDiscount) ? exactDiscount : Math.round(exactDiscount);
+                  return (
+                    <div className="mb-2">
+                      <span className="line-through text-gray-400 text-lg mr-2">{vListPrice.toFixed(2)} RON</span>
+                      <span className="font-bold text-2xl text-green-700 mr-2">{vPrice.toFixed(2)} RON</span>
+                      <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-sm font-semibold">-{variantDiscount}%</span>
+                      <span className="ml-2 text-sm text-blue-600 font-medium">({selectedDbVariant.code})</span>
+                    </div>
+                  );
+                }
+                // Varianta are doar preț de vânzare
+                if (vPrice) {
+                  return (
+                    <div className="mb-2">
+                      <span className="font-bold text-2xl">{vPrice.toFixed(2)} RON</span>
+                      <span className="ml-2 text-sm text-blue-600 font-medium">({selectedDbVariant.code})</span>
+                    </div>
+                  );
+                }
+              }
+              
+              // Dacă are variante dar nu e selectată niciuna - arată "de la X RON"
+              const variantsWithPrices = productVariants.filter(v => v.pret && v.pret > 0);
+              if (variantsWithPrices.length > 0 && !selectedDbVariant) {
+                const minPrice = Math.min(...variantsWithPrices.map(v => v.pret));
+                // Verifică dacă vreuna are și listPrice pentru a calcula discount
+                const variantWithMinPrice = variantsWithPrices.find(v => v.pret === minPrice);
+                const hasListPrice = variantWithMinPrice?.listPrice && variantWithMinPrice.listPrice > minPrice;
+                
+                if (hasListPrice) {
+                  const exactDiscount = (1 - minPrice / variantWithMinPrice.listPrice) * 100;
+                  const discount = Number.isInteger(exactDiscount) ? exactDiscount : Math.round(exactDiscount);
+                  return (
+                    <div className="mb-2">
+                      <span className="text-gray-500 mr-1">{txt.fromPrice}</span>
+                      <span className="line-through text-gray-400 text-lg mr-2">{variantWithMinPrice.listPrice.toFixed(2)} RON</span>
+                      <span className="font-bold text-2xl text-green-700 mr-2">{minPrice.toFixed(2)} RON</span>
+                      <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-sm font-semibold">-{discount}%</span>
+                    </div>
+                  );
+                }
+                return (
+                  <div className="mb-2">
+                    <span className="text-gray-500 mr-1">{txt.fromPrice}</span>
+                    <span className="font-bold text-2xl">{minPrice.toFixed(2)} RON</span>
+                  </div>
+                );
+              }
+              
+              // Produs fără variante - folosește prețul produsului cu discount-ul produsului
+              if (discountPercent > 0) {
+                const finalPrice = Math.round(product.price * (1 - discountPercent / 100));
+                return (
+                  <div className="mb-2">
+                    <span className="line-through text-gray-400 text-lg mr-2">{product.price} RON</span>
+                    <span className="font-bold text-2xl text-green-700 mr-2">{finalPrice} RON</span>
+                    <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-sm font-semibold">-{discountPercent}%</span>
+                  </div>
+                );
+              } else if (product.listPrice && product.listPrice > product.price) {
+                const exactDiscount = (1 - product.price / product.listPrice) * 100;
+                const discount = Number.isInteger(exactDiscount) ? exactDiscount : Math.round(exactDiscount);
+                return (
+                  <div className="mb-2">
+                    <span className="line-through text-gray-400 text-lg mr-2">{product.listPrice} RON</span>
+                    <span className="font-bold text-2xl text-green-700 mr-2">{product.price} RON</span>
+                    <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-sm font-semibold">-{discount}%</span>
+                  </div>
+                );
+              }
+              
+              return (
+                <div className="mb-2">
+                  <span className="font-bold text-2xl">{product.price} RON</span>
+                </div>
+              );
+            })()}
             <div className="mb-4 text-sm">
               {/* Afișare stoc bazat pe variante, produs la comandă sau produs normal */}
               {product.onDemand ? (
                 <span className="text-orange-600 font-semibold">{txt.availableOnDemand}</span>
               ) : productVariants.length > 0 ? (
-                selectedDbVariant ? (
+                selectedDbVariants.length > 0 ? (
+                  <span className="text-blue-600 font-semibold">
+                    {selectedDbVariants.length} {txt.variantsSelected}
+                  </span>
+                ) : selectedDbVariant ? (
                   <span>
                     {txt.availableStock} <span className={selectedDbVariant.stoc > 0 ? "text-green-600 font-semibold" : "text-red-600 font-semibold"}>
                       {selectedDbVariant.stoc > 0 ? selectedDbVariant.stoc : txt.outOfStock}
@@ -362,27 +474,25 @@ export default function ProductDetail({ params }: { params: Promise<{ productId:
               <button
                 onClick={handleAdd}
                 className={`px-6 py-2 rounded disabled:opacity-60 ${
-                  productVariants.length > 0 && !selectedDbVariant 
+                  productVariants.length > 0 && selectedDbVariants.length === 0 && !selectedDbVariant 
                     ? "bg-orange-500 hover:bg-orange-600 text-white" 
-                    : "bg-blue-600 text-white"
+                    : "bg-blue-600 hover:bg-blue-700 text-white"
                 }`}
                 disabled={
                   added || 
                   (product.onDemand 
                     ? false 
                     : (productVariants.length > 0 
-                        ? (selectedDbVariant && selectedDbVariant.stoc <= 0) 
+                        ? (selectedDbVariants.length === 0 && !selectedDbVariant)
                         : (product.stock ?? 0) === 0))
                 }
               >
                 {product.onDemand ? (
-                  added ? txt.added : txt.addToCart
+                  added ? txt.added : (selectedDbVariants.length > 1 ? `${txt.addToCart} (${selectedDbVariants.length})` : txt.addToCart)
                 ) : productVariants.length > 0 ? (
-                  !selectedDbVariant 
+                  selectedDbVariants.length === 0 && !selectedDbVariant
                     ? txt.selectVariant 
-                    : (selectedDbVariant.stoc <= 0 
-                        ? txt.outOfStock 
-                        : (added ? txt.added : txt.addToCart))
+                    : (added ? txt.added : (selectedDbVariants.length > 1 ? `${txt.addToCart} (${selectedDbVariants.length})` : txt.addToCart))
                 ) : (
                   (product.stock ?? 0) === 0 ? txt.outOfStock : (added ? txt.added : txt.addToCart)
                 )}
@@ -503,56 +613,125 @@ export default function ProductDetail({ params }: { params: Promise<{ productId:
             </div>
           )}
           
-          {/* Variante din baza de date - Tabel detaliat cu selecție */}
+          {/* Variante din baza de date - Tabel detaliat cu selecție multiplă */}
           {!variantsLoading && productVariants.length > 0 && (
             <div className="mt-6 bg-white border border-gray-300 rounded-lg p-4 overflow-x-auto">
               <div className="flex justify-between items-center mb-3">
                 <h3 className="font-semibold text-lg">{txt.productVariants}</h3>
-                {selectedDbVariant && (
-                  <button 
-                    onClick={() => setSelectedDbVariant(null)}
-                    className="text-sm text-blue-600 hover:underline"
-                  >
-                    {txt.clearSelection}
-                  </button>
-                )}
+                <div className="flex gap-2 items-center">
+                  {selectedDbVariants.length > 0 && (
+                    <span className="text-sm text-blue-600 font-medium">
+                      {selectedDbVariants.length} {txt.variantsSelected}
+                    </span>
+                  )}
+                  {(() => {
+                    const availableVariants = productVariants.filter(v => v.stoc > 0 || product.onDemand);
+                    const allSelected = availableVariants.length > 0 && selectedDbVariants.length === availableVariants.length;
+                    return (
+                      <button 
+                        onClick={() => {
+                          if (allSelected) {
+                            setSelectedDbVariants([]);
+                            setSelectedDbVariant(null);
+                          } else {
+                            setSelectedDbVariants(availableVariants);
+                            setSelectedDbVariant(availableVariants[0] || null);
+                          }
+                        }}
+                        className="text-sm bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition"
+                      >
+                        {allSelected ? txt.deselectAll : txt.selectAll}
+                      </button>
+                    );
+                  })()}
+                </div>
               </div>
               <p className="text-sm text-gray-500 mb-3">{txt.selectVariant}:</p>
-              <table className="w-full text-sm border-collapse">
+              <table className="w-full text-sm border-collapse min-w-max">
                 <thead>
                   <tr className="bg-gray-100 border-b">
-                    <th className="px-2 py-2 text-left font-semibold">{txt.code}</th>
-                    <th className="px-2 py-2 text-left font-semibold">{txt.compatibility}</th>
-                    <th className="px-2 py-2 text-left font-semibold">{txt.weight}</th>
-                    <th className="px-2 py-2 text-left font-semibold">{txt.stock}</th>
-                    <th className="px-2 py-2 text-left font-semibold">{txt.price}</th>
-                    <th className="px-2 py-2 text-left font-semibold">{txt.packaging}</th>
+                    <th className="px-2 py-2 text-center font-semibold w-10">
+                      <input 
+                        type="checkbox" 
+                        checked={(() => {
+                          const availableVariants = productVariants.filter(v => v.stoc > 0 || product.onDemand);
+                          return availableVariants.length > 0 && selectedDbVariants.length === availableVariants.length;
+                        })()}
+                        onChange={(e) => {
+                          const availableVariants = productVariants.filter(v => v.stoc > 0 || product.onDemand);
+                          if (e.target.checked) {
+                            setSelectedDbVariants(availableVariants);
+                            setSelectedDbVariant(availableVariants[0] || null);
+                          } else {
+                            setSelectedDbVariants([]);
+                            setSelectedDbVariant(null);
+                          }
+                        }}
+                        className="w-4 h-4 cursor-pointer"
+                      />
+                    </th>
+                    <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">{txt.code}</th>
+                    <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">{txt.compatibility}</th>
+                    <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">{txt.weight}</th>
+                    <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">{txt.stock}</th>
+                    <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">{txt.price}</th>
+                    <th className="px-3 py-2 text-left font-semibold whitespace-nowrap">{txt.packaging}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {productVariants.map((variant, idx) => {
+                    const isChecked = selectedDbVariants.some(v => v.id === variant.id);
                     const isSelected = selectedDbVariant?.id === variant.id;
-                    const isOutOfStock = variant.stoc <= 0;
+                    const isOutOfStock = variant.stoc <= 0 && !product.onDemand;
                     return (
                       <tr 
                         key={variant.id} 
-                        onClick={() => !isOutOfStock && setSelectedDbVariant(variant)}
+                        onClick={() => {
+                          if (isOutOfStock) return;
+                          // Toggle selection în lista de multi-select
+                          if (isChecked) {
+                            setSelectedDbVariants(prev => prev.filter(v => v.id !== variant.id));
+                            if (isSelected) setSelectedDbVariant(null);
+                          } else {
+                            setSelectedDbVariants(prev => [...prev, variant]);
+                            setSelectedDbVariant(variant);
+                          }
+                        }}
                         className={`cursor-pointer transition ${
-                          isSelected 
-                            ? "bg-blue-100 border-2 border-blue-500" 
+                          isChecked 
+                            ? "bg-blue-100 border-l-4 border-blue-500" 
                             : isOutOfStock 
                               ? "bg-gray-100 opacity-60 cursor-not-allowed"
                               : idx % 2 === 0 ? "bg-white hover:bg-blue-50" : "bg-gray-50 hover:bg-blue-50"
                         }`}
                       >
-                        <td className="px-2 py-2 font-semibold text-blue-700">{variant.code}</td>
-                        <td className="px-2 py-2">{(language === "en" && variant.compatibilEn) ? variant.compatibilEn : (variant.compatibil || '-')}</td>
-                        <td className="px-2 py-2">{variant.greutate ? `${variant.greutate} kg` : '-'}</td>
-                        <td className={`px-2 py-2 font-semibold ${isOutOfStock ? 'text-red-600' : 'text-green-600'}`}>
-                          {isOutOfStock ? txt.outOfStock : variant.stoc}
+                        <td className="px-2 py-2 text-center">
+                          <input 
+                            type="checkbox" 
+                            checked={isChecked}
+                            disabled={isOutOfStock}
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={(e) => {
+                              if (isOutOfStock) return;
+                              if (e.target.checked) {
+                                setSelectedDbVariants(prev => [...prev, variant]);
+                                setSelectedDbVariant(variant);
+                              } else {
+                                setSelectedDbVariants(prev => prev.filter(v => v.id !== variant.id));
+                                if (isSelected) setSelectedDbVariant(null);
+                              }
+                            }}
+                            className="w-4 h-4 cursor-pointer"
+                          />
                         </td>
-                        <td className="px-2 py-2 font-semibold text-green-700">{variant.pret ? `${variant.pret.toFixed(2)} RON` : '-'}</td>
-                        <td className="px-2 py-2">{(language === "en" && variant.modAmbalareEn) ? variant.modAmbalareEn : (variant.modAmbalare || '-')}</td>
+                        <td className="px-3 py-2 font-semibold text-blue-700 whitespace-nowrap">{variant.code}</td>
+                        <td className="px-3 py-2 whitespace-nowrap">{(language === "en" && variant.compatibilEn) ? variant.compatibilEn : (variant.compatibil || '-')}</td>
+                        <td className="px-3 py-2 whitespace-nowrap">{variant.greutate ? `${variant.greutate} kg` : '-'}</td>
+                        <td className={`px-3 py-2 font-semibold whitespace-nowrap ${product.onDemand ? 'text-orange-600' : (variant.stoc <= 0 ? 'text-red-600' : 'text-green-600')}`}>
+                          {product.onDemand ? txt.onDemand : (variant.stoc <= 0 ? txt.outOfStock : variant.stoc)}
+                        </td>
+                        <td className="px-3 py-2 font-semibold text-green-700 whitespace-nowrap">{variant.pret ? `${variant.pret.toFixed(2)} RON` : '-'}</td>
+                        <td className="px-3 py-2 whitespace-nowrap">{(language === "en" && variant.modAmbalareEn) ? variant.modAmbalareEn : (variant.modAmbalare || '-')}</td>
                       </tr>
                     );
                   })}
@@ -569,6 +748,78 @@ export default function ProductDetail({ params }: { params: Promise<{ productId:
                       </div>
                     ) : null;
                   })}
+                </div>
+              )}
+              
+              {/* Panel detalii tehnice varianta selectată */}
+              {selectedDbVariant && (
+                <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <h4 className="font-semibold text-blue-800 mb-3 flex items-center gap-2">
+                    <span className="bg-blue-600 text-white px-2 py-1 rounded text-sm">{selectedDbVariant.code}</span>
+                    {txt.variantDetails}
+                  </h4>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+                    {((language === "en" && selectedDbVariant.marimeEn) || selectedDbVariant.marime) && (
+                      <div className="bg-white rounded p-2 border">
+                        <span className="text-gray-500 block text-xs">{txt.sizeLabel}</span>
+                        <span className="font-semibold">{(language === "en" && selectedDbVariant.marimeEn) ? selectedDbVariant.marimeEn : selectedDbVariant.marime}</span>
+                      </div>
+                    )}
+                    {selectedDbVariant.distantaSesizare && (
+                      <div className="bg-white rounded p-2 border">
+                        <span className="text-gray-500 block text-xs">{txt.detectionDistance}</span>
+                        <span className="font-semibold">{selectedDbVariant.distantaSesizare}</span>
+                      </div>
+                    )}
+                    {selectedDbVariant.tipIesire && (
+                      <div className="bg-white rounded p-2 border">
+                        <span className="text-gray-500 block text-xs">{txt.outputType}</span>
+                        <span className="font-semibold">{selectedDbVariant.tipIesire}</span>
+                      </div>
+                    )}
+                    {selectedDbVariant.tipContact && (
+                      <div className="bg-white rounded p-2 border">
+                        <span className="text-gray-500 block text-xs">{txt.contactType}</span>
+                        <span className="font-semibold">{selectedDbVariant.tipContact}</span>
+                      </div>
+                    )}
+                    {selectedDbVariant.tensiune && (
+                      <div className="bg-white rounded p-2 border">
+                        <span className="text-gray-500 block text-xs">{txt.voltage}</span>
+                        <span className="font-semibold">{selectedDbVariant.tensiune}</span>
+                      </div>
+                    )}
+                    {selectedDbVariant.curent && (
+                      <div className="bg-white rounded p-2 border">
+                        <span className="text-gray-500 block text-xs">{txt.current}</span>
+                        <span className="font-semibold">{selectedDbVariant.curent}</span>
+                      </div>
+                    )}
+                    {selectedDbVariant.protectie && (
+                      <div className="bg-white rounded p-2 border">
+                        <span className="text-gray-500 block text-xs">{txt.protection}</span>
+                        <span className="font-semibold">{selectedDbVariant.protectie}</span>
+                      </div>
+                    )}
+                    {selectedDbVariant.material && (
+                      <div className="bg-white rounded p-2 border">
+                        <span className="text-gray-500 block text-xs">{txt.material}</span>
+                        <span className="font-semibold">{selectedDbVariant.material}</span>
+                      </div>
+                    )}
+                    {selectedDbVariant.cablu && (
+                      <div className="bg-white rounded p-2 border">
+                        <span className="text-gray-500 block text-xs">{txt.cable}</span>
+                        <span className="font-semibold">{selectedDbVariant.cablu}</span>
+                      </div>
+                    )}
+                    {((language === "en" && selectedDbVariant.compatibilEn) || selectedDbVariant.compatibil) && (
+                      <div className="bg-white rounded p-2 border col-span-2 md:col-span-3">
+                        <span className="text-gray-500 block text-xs">{txt.compatibility}</span>
+                        <span className="font-semibold">{(language === "en" && selectedDbVariant.compatibilEn) ? selectedDbVariant.compatibilEn : selectedDbVariant.compatibil}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>

@@ -1,20 +1,19 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
-// Acest endpoint șterge toate cookie-urile de sesiune
-// pentru a rezolva problemele de decriptare după schimbarea NEXTAUTH_SECRET
+// Acest endpoint șterge doar cookie-urile NextAuth
+// NU șterge adminSession - admin-ul rămâne conectat
 export async function POST() {
   const cookieStore = await cookies();
   
-  // Lista de cookie-uri de șters
+  // Lista de cookie-uri NextAuth de șters (fără admin!)
   const cookiesToClear = [
     "next-auth.session-token",
     "__Secure-next-auth.session-token",
     "next-auth.csrf-token",
     "__Host-next-auth.csrf-token",
     "next-auth.callback-url",
-    "__Secure-next-auth.callback-url",
-    "admin_session"
+    "__Secure-next-auth.callback-url"
   ];
 
   const response = NextResponse.json({ 

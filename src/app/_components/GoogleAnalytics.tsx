@@ -4,7 +4,7 @@ import Script from "next/script";
 import { useEffect } from "react";
 
 // ID-ul Google Analytics - poate fi configurat din variabile de mediu sau admin
-const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_ID || "G-XXXXXXXXXX";
+const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || process.env.NEXT_PUBLIC_GA_ID || "";
 
 export default function GoogleAnalytics() {
   useEffect(() => {
@@ -23,7 +23,7 @@ export default function GoogleAnalytics() {
   }, []);
 
   // Nu încărca dacă nu e setat ID-ul
-  if (GA_MEASUREMENT_ID === "G-XXXXXXXXXX") {
+  if (!GA_MEASUREMENT_ID || GA_MEASUREMENT_ID === "G-XXXXXXXXXX") {
     return null;
   }
 

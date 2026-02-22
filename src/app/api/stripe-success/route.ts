@@ -39,6 +39,45 @@ export async function POST(req: NextRequest) {
         if (!manualOrderId && metadata.manualOrderId) manualOrderId = metadata.manualOrderId;
         
         console.log('[STRIPE-SUCCESS] Data retrieved from Stripe:', { items: items?.length, client: Object.keys(client || {}), userEmail });
+        
+        // Reconstruiește items complet din DB dacă avem doar date minime (id, vid, qty, p)
+        if (items && items.length > 0 && items[0].id && !items[0].name) {
+          console.log('[STRIPE-SUCCESS] Reconstruiesc items din DB...');
+          const reconstructedItems = [];
+          for (const minItem of items) {
+            const productId = Number(minItem.id);
+            const variantId = minItem.vid ? Number(minItem.vid) : null;
+            const qty = minItem.qty || 1;
+            const price = minItem.p || 0;
+            
+            const product = await prisma.product.findUnique({ 
+              where: { id: productId },
+              include: { variants: true }
+            });
+            
+            if (product) {
+              const variant = variantId ? product.variants.find((v: any) => v.id === variantId) : null;
+              reconstructedItems.push({
+                id: product.id,
+                name: product.name || product.denumire,
+                nameEn: product.nameEn,
+                price: price,
+                discountedPrice: price,
+                quantity: qty,
+                variantId: variant?.id || null,
+                variantCode: variant?.codVarianta || null,
+                variantInfo: variant?.info || null,
+                deliveryTime: variant?.deliveryTime || product.deliveryTime || null,
+                productDiscount: 0,
+                couponDiscount: 0
+              });
+            }
+          }
+          if (reconstructedItems.length > 0) {
+            items = reconstructedItems;
+            console.log('[STRIPE-SUCCESS] Items reconstruite:', items.length);
+          }
+        }
       } catch (stripeError) {
         console.error('[STRIPE-SUCCESS] Error fetching Stripe session:', stripeError);
       }
@@ -133,10 +172,11 @@ export async function POST(req: NextRequest) {
       const pdfBuffer = await generateOrderConfirmationPdfBuffer(pdfOrder, lang);
       
       // Folosește calculateCartSummary pentru stacking logic
-      const productsRaw: (CartSummaryProduct & { variantCode?: string; variantInfo?: string })[] = orderItems.map((item: any) => ({
+      const productsRaw: (CartSummaryProduct & { variantCode?: string; variantInfo?: string; listPrice?: number })[] = orderItems.map((item: any) => ({
         id: item.id,
         name: item.name || item.denumire,
         price: item.price,
+        listPrice: item.listPrice || null,
         quantity: item.quantity || item.qty || 1,
         discount: item.discount,
         discountType: item.discountType,
@@ -150,25 +190,14 @@ export async function POST(req: NextRequest) {
       }));
       const summary = calculateCartSummary({ products: productsRaw });
       
-      // Reconstruiește array-ul de produse cu stacking logic
+      // Verifică dacă există cupoane
+      const hasCoupon = productsRaw.some(item => item.appliedCoupon);
+      
+      // Reconstruiește array-ul de produse - NU aplicăm discount suplimentar, prețul include deja reducerea
       const products = productsRaw.map((item) => {
+        // Prețul deja include reducerea de produs
         let priceAfterProductDiscount = item.price;
-        let productDiscount = 0;
         
-        // Folosește valoarea pre-calculată dacă există, altfel calculează
-        if (typeof (item as any).productDiscountValue === 'number' && (item as any).productDiscountValue > 0) {
-          productDiscount = (item as any).productDiscountValue;
-          priceAfterProductDiscount = item.price - productDiscount;
-        } else if (typeof item.discount === 'number' && item.discount > 0) {
-          if (item.discountType === 'percent' || !item.discountType) {
-            const percent = item.discount <= 1 ? item.discount * 100 : item.discount;
-            productDiscount = item.price * (percent / 100);
-          } else {
-            productDiscount = item.discount;
-          }
-          priceAfterProductDiscount = item.price - productDiscount;
-        }
-        if (priceAfterProductDiscount < 0) priceAfterProductDiscount = 0;
         let couponDiscount = 0;
         let priceAfterCoupon = priceAfterProductDiscount;
         if (item.appliedCoupon) {
@@ -183,16 +212,16 @@ export async function POST(req: NextRequest) {
         if (priceAfterCoupon < 0) priceAfterCoupon = 0;
         return {
           ...item,
-          productDiscount,
           couponDiscount,
-          priceAfterProductDiscount,
           priceAfterCoupon,
           subtotal: priceAfterCoupon * item.quantity
         };
       });
       
-      // Generează HTML pentru email
-      const tableHeaders = [txt.nr, txt.product, txt.quantity, txt.salePrice, txt.productDiscount, txt.couponDiscount, txt.finalPrice, txt.subtotal, txt.deliveryTerm];
+      // Generează HTML pentru email - tabel simplificat fără coloane de reducere produs
+      const tableHeaders = hasCoupon
+        ? [txt.nr, txt.product, txt.quantity, txt.salePrice, txt.couponDiscount, txt.finalPrice, txt.subtotal, txt.deliveryTerm]
+        : [txt.nr, txt.product, txt.quantity, txt.salePrice, txt.subtotal, txt.deliveryTerm];
       let tableHtml = `<table style='width:100%;border-collapse:collapse;margin-bottom:16px;'>`;
       tableHtml += `<thead style='background:#f3f3f3;'><tr>`;
       for (const header of tableHeaders) {
@@ -217,14 +246,31 @@ export async function POST(req: NextRequest) {
         if (lang === 'en' && deliveryTermDisplay !== '-') {
           deliveryTermDisplay = deliveryTermDisplay.replace(/zile/gi, 'days').replace(/zi\b/gi, 'day');
         }
+        
+        // Verifică dacă există discount de produs (listPrice > price)
+        const hasProductDiscount = item.listPrice && item.listPrice > item.price;
+        
+        // Construiește celula de preț cu discount afișat ca în coș
+        let priceCell = '';
+        if (hasProductDiscount) {
+          priceCell = `<span style='text-decoration:line-through;color:#9ca3af;font-size:0.9em;'>${item.listPrice!.toFixed(2)} ${txt.currency}</span><br/>` +
+            `<span style='font-weight:600;'>${item.price.toFixed(2)} ${txt.currency}</span>`;
+          if (item.discount && item.discount > 0) {
+            priceCell += `<br/><span style='color:#16a34a;font-size:0.85em;'>(-${item.discount}%)</span>`;
+          }
+        } else {
+          priceCell = `${item.price.toFixed(2)} ${txt.currency}`;
+        }
+        
         tableHtml += `<tr>`;
         tableHtml += `<td style='border:1px solid #ddd;padding:6px;text-align:center;'>${idx + 1}</td>`;
         tableHtml += `<td style='border:1px solid #ddd;padding:6px 18px;text-align:left;min-width:180px;'>${productName || '-'}</td>`;
         tableHtml += `<td style='border:1px solid #ddd;padding:6px;text-align:center;'>${item.quantity.toFixed(3)}</td>`;
-        tableHtml += `<td style='border:1px solid #ddd;padding:6px;text-align:center;'>${item.price.toFixed(2)} ${txt.currency}</td>`;
-        tableHtml += `<td style='border:1px solid #ddd;padding:6px;text-align:center;color:#ea580c;'>${item.productDiscount !== 0 ? '-' + item.productDiscount.toFixed(2) + ' ' + txt.currency : '-'}</td>`;
-        tableHtml += `<td style='border:1px solid #ddd;padding:6px;text-align:center;color:#2563eb;'>${item.couponDiscount !== 0 ? '-' + item.couponDiscount.toFixed(2) + ' ' + txt.currency : '-'}</td>`;
-        tableHtml += `<td style='border:1px solid #ddd;padding:6px;text-align:center;'>${item.priceAfterCoupon.toFixed(2)} ${txt.currency}</td>`;
+        tableHtml += `<td style='border:1px solid #ddd;padding:6px;text-align:center;'>${priceCell}</td>`;
+        if (hasCoupon) {
+          tableHtml += `<td style='border:1px solid #ddd;padding:6px;text-align:center;color:#2563eb;'>${item.couponDiscount > 0 ? '-' + item.couponDiscount.toFixed(2) + ' ' + txt.currency : '-'}</td>`;
+          tableHtml += `<td style='border:1px solid #ddd;padding:6px;text-align:center;'>${item.priceAfterCoupon.toFixed(2)} ${txt.currency}</td>`;
+        }
         tableHtml += `<td style='border:1px solid #ddd;padding:6px;text-align:center;'>${item.subtotal.toFixed(2)} ${txt.currency}</td>`;
         tableHtml += `<td style='border:1px solid #ddd;padding:6px;text-align:center;'>${deliveryTermDisplay}</td>`;
         tableHtml += `</tr>`;
@@ -233,6 +279,18 @@ export async function POST(req: NextRequest) {
       
       const courierCostVal = existingOrder.courierCost || 0;
       let salutNume = orderClient.denumire ? `<b>${orderClient.denumire}</b>` : (orderClient.name ? `<b>${orderClient.name}</b>` : '');
+      
+      // Sumar simplificat - fără linii de reducere când sunt 0
+      let sumarHtml = `<div style='margin-bottom:8px;'><b>${txt.subtotalSalePrice}:</b> ${summary.subtotal.toFixed(2)} ${txt.currency}</div>`;
+      if (summary.totalCouponDiscount > 0) {
+        sumarHtml += `<div style='margin-bottom:8px;color:#2563eb;'><b>${txt.totalCouponDiscount}:</b> -${summary.totalCouponDiscount.toFixed(2)} ${txt.currency}</div>`;
+        sumarHtml += `<div style='margin-bottom:8px;color:green;'><b>${txt.subtotalAfterDiscounts}:</b> ${summary.subtotalDupaReduceri.toFixed(2)} ${txt.currency}</div>`;
+      }
+      sumarHtml += `<div style='margin-bottom:8px;'><b>${txt.courierCostLabel}:</b> ${courierCostVal.toFixed(2)} ${txt.currency}</div>`;
+      sumarHtml += `<div style='margin-bottom:8px;'><b>${txt.paymentMethod}:</b> ${txt.cardOnline}</div>`;
+      sumarHtml += `<div style='margin-bottom:8px;'><b>${txt.totalNoVat}:</b> ${summary.totalFaraTVA.toFixed(2)} ${txt.currency}</div>`;
+      sumarHtml += `<div style='margin-bottom:8px;'><b>${txt.vat} (21%):</b> ${summary.tva.toFixed(2)} ${txt.currency}</div>`;
+      sumarHtml += `<div style='font-size:1.1rem; font-weight:700; margin-bottom:8px; color:#2563eb;'><b>${txt.totalWithVat}:</b> ${summary.totalCuTVA.toFixed(2)} ${txt.currency}</div>`;
       
       let html = `<div style='font-family: Arial, sans-serif; max-width: 980px; margin: 0 auto; border:1px solid #e5e7eb; border-radius:8px; overflow-x:auto; background:#fff;'>
       <div style='background:#2563eb; color:#fff; padding:24px 48px;'>
@@ -244,15 +302,7 @@ export async function POST(req: NextRequest) {
         <p style='margin-bottom:16px;'>${txt.orderPaid}</p>
         <div style='background:#f3f4f6; border-left:4px solid #2563eb; padding:12px 18px; margin-bottom:18px; color:#2563eb; font-size:1.08rem; font-weight:500;'>${txt.paidOnline}</div>
         <div style='overflow-x:auto;'>${tableHtml}</div>
-        <div style='margin-bottom:8px;'><b>${txt.subtotalSalePrice}:</b> ${summary.subtotal.toFixed(2)} ${txt.currency}</div>
-        <div style='margin-bottom:8px;color:#ea580c;'><b>${txt.totalProductDiscount}:</b> -${summary.totalProductDiscount.toFixed(2)} ${txt.currency}</div>
-        <div style='margin-bottom:8px;color:#2563eb;'><b>${txt.totalCouponDiscount}:</b> -${summary.totalCouponDiscount.toFixed(2)} ${txt.currency}</div>
-        <div style='margin-bottom:8px;color:green;'><b>${txt.subtotalAfterDiscounts}:</b> ${summary.subtotalDupaReduceri.toFixed(2)} ${txt.currency}</div>
-        <div style='margin-bottom:8px;'><b>${txt.courierCostLabel}:</b> ${courierCostVal.toFixed(2)} ${txt.currency}</div>
-        <div style='margin-bottom:8px;'><b>${txt.paymentMethod}:</b> ${txt.cardOnline}</div>
-        <div style='margin-bottom:8px;'><b>${txt.totalNoVat}:</b> ${summary.totalFaraTVA.toFixed(2)} ${txt.currency}</div>
-        <div style='margin-bottom:8px;'><b>${txt.vat} (21%):</b> ${summary.tva.toFixed(2)} ${txt.currency}</div>
-        <div style='font-size:1.1rem; font-weight:700; margin-bottom:8px; color:#2563eb;'><b>${txt.totalWithVat}:</b> ${summary.totalCuTVA.toFixed(2)} ${txt.currency}</div>
+        ${sumarHtml}
         <div style='margin-top:16px; color:#2563eb; font-weight:600;'>${txt.thankYou}<br/>${txt.team}</div>
       </div>
       <div style='background:#f3f4f6; color:#444; padding:12px 32px; font-size:0.95rem;'>
@@ -262,7 +312,9 @@ export async function POST(req: NextRequest) {
       
       await sendEmail({
         to: orderEmail,
-        subject: txt.emailSubjectPaid,
+        subject: lang === 'en' 
+          ? `Payment confirmation #${manualOrderId} - PREV-COR TPM`
+          : `Confirmare plată comandă #${manualOrderId} - PREV-COR TPM`,
         text: `${txt.orderPaid}\n\nTotal: ${updatedOrder.total?.toFixed(2) || '-'} ${txt.currency}\n\n${txt.team}`,
         html,
         attachments: [
@@ -306,23 +358,9 @@ export async function POST(req: NextRequest) {
 
     // Calculează sumarul din datele reale
     const subtotalPretVanzare = items.reduce((sum, item) => sum + (typeof item.price === 'number' ? item.price : 0) * (item.qty || item.quantity || 1), 0);
-    // Stacking: discount produs
-    const subtotalDupaProduseDiscount = items.reduce((sum, item) => {
-      const price = typeof item.price === 'number' ? item.price : 0;
-      let discount = typeof item.discount === 'number' ? item.discount : 0;
-      if (discount > 1 && discount <= 100) discount = discount / 100;
-      if (discount > 1) discount = 1;
-      if (discount < 0) discount = 0;
-      let priceWithDiscount = price;
-      if (item.discountType === 'percent' || (!item.discountType && discount > 0)) {
-        priceWithDiscount = price * (1 - discount);
-      } else if (item.discountType === 'fixed') {
-        priceWithDiscount = price - discount;
-      }
-      if (priceWithDiscount < 0) priceWithDiscount = 0;
-      return sum + priceWithDiscount * (item.qty || item.quantity || 1);
-    }, 0);
-    // Stacking: aplică cuponul peste subtotalul cu discount produs
+    // Prețul deja include reducerea de produs - nu aplicăm discount suplimentar
+    const subtotalDupaProduseDiscount = subtotalPretVanzare;
+    // Stacking: aplică cuponul peste subtotalul de vânzare
     const appliedCoupon = items[0]?.appliedCoupon || null;
     let subtotalDupaReduceri = subtotalDupaProduseDiscount;
     if (appliedCoupon) {
@@ -365,7 +403,7 @@ export async function POST(req: NextRequest) {
       console.log('Error marking abandoned cart as recovered:', e);
     }
 
-    // Scade automat stocul produselor/variantelor comandate
+    // Scade automat stocul produselor/variantelor comandate (skip pentru produse pe comandă)
     for (const item of Array.isArray(items) ? items : []) {
       if (item.id && typeof item.quantity === 'number') {
         const variantId = item.variantId ? Number(item.variantId) : null;
@@ -373,27 +411,37 @@ export async function POST(req: NextRequest) {
         if (variantId) {
           // Scade stocul din varianta selectată
           const variant = await prisma.productVariant.findUnique({ where: { id: variantId } });
-          if (!variant || typeof variant.stoc !== 'number' || variant.stoc < item.quantity) {
+          // Skip verificare stoc dacă varianta este pe comandă (onDemand)
+          const isOnDemand = (variant as any)?.onDemand === true;
+          if (!isOnDemand && (!variant || typeof variant.stoc !== 'number' || variant.stoc < item.quantity)) {
             return NextResponse.json({
               error: `<div style='background:#d1fae5;border:1px solid #10b981;padding:24px 18px;margin:24px 0 0 0;border-radius:12px;text-align:center;'><div style='font-size:1.6rem;font-weight:bold;color:#059669;margin-bottom:10px;'>Comanda nu a putut fi procesată!</div><div style='font-size:1.1rem;color:#222;margin-bottom:8px;'>Stoc insuficient pentru varianta <b>${item.variantCode || variantId}<\/b> a produsului <b>${item.name || item.denumire || '-'}<\/b>. Disponibil: <b>${variant ? variant.stoc : 0}<\/b></div><div style='color:#444;'>Vă rugăm să verificați stocul sau să alegeți altă variantă.</div></div>`
             }, { status: 400 });
           }
-          await prisma.productVariant.update({
-            where: { id: variantId },
-            data: { stoc: { decrement: item.quantity } }
-          });
+          // Pentru onDemand, NU decrementăm stocul (nu există stoc fizic)
+          if (!isOnDemand) {
+            await prisma.productVariant.update({
+              where: { id: variantId },
+              data: { stoc: { decrement: item.quantity } }
+            });
+          }
         } else {
           // Scade stocul din produsul principal (fără variante)
           const prod = await prisma.product.findUnique({ where: { id: Number(item.id) } });
-          if (!prod || typeof prod.stock !== 'number' || prod.stock < item.quantity) {
+          // Skip verificare stoc dacă produsul este pe comandă (onDemand)
+          const isOnDemand = prod?.onDemand === true;
+          if (!isOnDemand && (!prod || typeof prod.stock !== 'number' || prod.stock < item.quantity)) {
             return NextResponse.json({
               error: `<div style='background:#d1fae5;border:1px solid #10b981;padding:24px 18px;margin:24px 0 0 0;border-radius:12px;text-align:center;'><div style='font-size:1.6rem;font-weight:bold;color:#059669;margin-bottom:10px;'>Comanda nu a putut fi procesată!</div><div style='font-size:1.1rem;color:#222;margin-bottom:8px;'>Stoc insuficient pentru produsul <b>${item.name || item.denumire || '-'}<\/b>. Disponibil: <b>${prod ? prod.stock : 0}<\/b></div><div style='color:#444;'>Vă rugăm să verificați stocul sau să alegeți alt produs.</div></div>`
             }, { status: 400 });
           }
-          await prisma.product.update({
-            where: { id: Number(item.id) },
-            data: { stock: { decrement: item.quantity } }
-          });
+          // Pentru onDemand, NU decrementăm stocul (nu există stoc fizic)
+          if (!isOnDemand) {
+            await prisma.product.update({
+              where: { id: Number(item.id) },
+              data: { stock: { decrement: item.quantity } }
+            });
+          }
         }
       }
     }
@@ -423,11 +471,12 @@ export async function POST(req: NextRequest) {
     }
     const pdfBuffer = await generateOrderConfirmationPdfBuffer(pdfOrder, lang);
     // Folosește calculateCartSummary pentru stacking logic corect
-      const productsRaw: (CartSummaryProduct & { nameEn?: string | null; variantCode?: string; variantInfo?: string })[] = (itemsWithNameEn || []).map((item: any) => ({
+      const productsRaw: (CartSummaryProduct & { nameEn?: string | null; variantCode?: string; variantInfo?: string; listPrice?: number })[] = (itemsWithNameEn || []).map((item: any) => ({
       id: item.id,
       name: item.name || item.denumire,
       nameEn: item.nameEn || null,
       price: item.price,
+      listPrice: item.listPrice || null,
       quantity: item.quantity || item.qty || 1,
       discount: item.discount,
       discountType: item.discountType,
@@ -440,30 +489,19 @@ export async function POST(req: NextRequest) {
       couponDiscountValue: item.couponDiscount || null
     }));
     const summary = calculateCartSummary({ products: productsRaw });
-    // Reconstruiește array-ul de produse cu stacking logic pe fiecare rând
+    
+    // Verifică dacă există cupoane
+    const hasCouponOnline = productsRaw.some(item => item.appliedCoupon || (typeof (item as any).couponDiscountValue === 'number' && (item as any).couponDiscountValue > 0));
+    
+    // Reconstruiește array-ul de produse - NU aplicăm discount suplimentar, prețul include deja reducerea
     const products = productsRaw.map((item) => {
+      // Prețul deja include reducerea de produs
       let priceAfterProductDiscount = item.price;
-      let productDiscount = 0;
-      
-      // Folosește valoarea pre-calculată dacă există, altfel calculează
-      if (typeof (item as any).productDiscountValue === 'number' && (item as any).productDiscountValue > 0) {
-        productDiscount = (item as any).productDiscountValue;
-        priceAfterProductDiscount = item.price - productDiscount;
-      } else if (typeof item.discount === 'number' && item.discount > 0) {
-        if (item.discountType === 'percent' || !item.discountType) {
-          const percent = item.discount <= 1 ? item.discount * 100 : item.discount;
-          productDiscount = item.price * (percent / 100);
-        } else {
-          productDiscount = item.discount;
-        }
-        priceAfterProductDiscount = item.price - productDiscount;
-      }
-      if (priceAfterProductDiscount < 0) priceAfterProductDiscount = 0;
       
       let couponDiscount = 0;
       let priceAfterCoupon = priceAfterProductDiscount;
       
-      // Folosește valoarea pre-calculată pentru cupon dacă există
+      // Calculează doar cupon dacă există
       if (typeof (item as any).couponDiscountValue === 'number' && (item as any).couponDiscountValue > 0) {
         couponDiscount = (item as any).couponDiscountValue;
         priceAfterCoupon = priceAfterProductDiscount - couponDiscount;
@@ -479,15 +517,15 @@ export async function POST(req: NextRequest) {
       if (priceAfterCoupon < 0) priceAfterCoupon = 0;
       return {
         ...item,
-        productDiscount,
         couponDiscount,
-        priceAfterProductDiscount,
         priceAfterCoupon,
         subtotal: priceAfterCoupon * item.quantity
       };
     });
-    // Generează HTML identic cu order-complete pentru email
-    const tableHeaders = [txt.nr, txt.product, txt.quantity, txt.salePrice, txt.productDiscount, txt.couponDiscount, txt.finalPrice, txt.subtotal, txt.deliveryTerm];
+    // Generează HTML simplificat - fără coloane de reducere produs
+    const tableHeaders = hasCouponOnline
+      ? [txt.nr, txt.product, txt.quantity, txt.salePrice, txt.couponDiscount, txt.finalPrice, txt.subtotal, txt.deliveryTerm]
+      : [txt.nr, txt.product, txt.quantity, txt.salePrice, txt.subtotal, txt.deliveryTerm];
     let tableHtml = `<table style='width:100%;border-collapse:collapse;margin-bottom:16px;'>`;
     tableHtml += `<thead style='background:#f3f3f3;'><tr>`;
     for (const header of tableHeaders) {
@@ -512,14 +550,31 @@ export async function POST(req: NextRequest) {
       if (lang === 'en' && deliveryTermDisplay !== '-') {
         deliveryTermDisplay = deliveryTermDisplay.replace(/zile/gi, 'days').replace(/zi\b/gi, 'day');
       }
+      
+      // Verifică dacă există discount de produs (listPrice > price)
+      const hasProductDiscount = item.listPrice && item.listPrice > item.price;
+      
+      // Construiește celula de preț cu discount afișat ca în coș
+      let priceCell = '';
+      if (hasProductDiscount) {
+        priceCell = `<span style='text-decoration:line-through;color:#9ca3af;font-size:0.9em;'>${item.listPrice!.toFixed(2)} ${txt.currency}</span><br/>` +
+          `<span style='font-weight:600;'>${item.price.toFixed(2)} ${txt.currency}</span>`;
+        if (item.discount && item.discount > 0) {
+          priceCell += `<br/><span style='color:#16a34a;font-size:0.85em;'>(-${item.discount}%)</span>`;
+        }
+      } else {
+        priceCell = `${item.price.toFixed(2)} ${txt.currency}`;
+      }
+      
       tableHtml += `<tr>`;
       tableHtml += `<td style='border:1px solid #ddd;padding:6px;text-align:center;'>${idx + 1}</td>`;
       tableHtml += `<td style='border:1px solid #ddd;padding:6px 18px;text-align:left;min-width:180px;'>${productName || '-'}</td>`;
       tableHtml += `<td style='border:1px solid #ddd;padding:6px;text-align:center;'>${item.quantity.toFixed(3)}</td>`;
-      tableHtml += `<td style='border:1px solid #ddd;padding:6px;text-align:center;'>${item.price.toFixed(2)} ${txt.currency}</td>`;
-      tableHtml += `<td style='border:1px solid #ddd;padding:6px;text-align:center;color:#ea580c;'>${item.productDiscount !== 0 ? (item.productDiscount > 0 ? '-' + item.productDiscount.toFixed(2) + ' ' + txt.currency : item.productDiscount.toFixed(2) + ' ' + txt.currency) : '-'}</td>`;
-      tableHtml += `<td style='border:1px solid #ddd;padding:6px;text-align:center;color:#2563eb;'>${item.couponDiscount !== 0 ? (item.couponDiscount > 0 ? '-' + item.couponDiscount.toFixed(2) + ' ' + txt.currency : item.couponDiscount.toFixed(2) + ' ' + txt.currency) : '-'}</td>`;
-      tableHtml += `<td style='border:1px solid #ddd;padding:6px;text-align:center;'>${item.priceAfterCoupon.toFixed(2)} ${txt.currency}</td>`;
+      tableHtml += `<td style='border:1px solid #ddd;padding:6px;text-align:center;'>${priceCell}</td>`;
+      if (hasCouponOnline) {
+        tableHtml += `<td style='border:1px solid #ddd;padding:6px;text-align:center;color:#2563eb;'>${item.couponDiscount > 0 ? '-' + item.couponDiscount.toFixed(2) + ' ' + txt.currency : '-'}</td>`;
+        tableHtml += `<td style='border:1px solid #ddd;padding:6px;text-align:center;'>${item.priceAfterCoupon.toFixed(2)} ${txt.currency}</td>`;
+      }
       tableHtml += `<td style='border:1px solid #ddd;padding:6px;text-align:center;'>${item.subtotal.toFixed(2)} ${txt.currency}</td>`;
       tableHtml += `<td style='border:1px solid #ddd;padding:6px;text-align:center;'>${deliveryTermDisplay}</td>`;
       tableHtml += `</tr>`;
@@ -581,6 +636,19 @@ export async function POST(req: NextRequest) {
     } else if (client.name) {
       salutNume = `<b>${client.name}</b>`;
     }
+    
+    // Sumar simplificat - fără linii de reducere când sunt 0
+    let sumarHtmlOnline = `<div style='margin-bottom:8px;'><b>${txt.subtotalSalePrice}:</b> ${summary.subtotal.toFixed(2)} ${txt.currency}</div>`;
+    if (summary.totalCouponDiscount > 0) {
+      sumarHtmlOnline += `<div style='margin-bottom:8px;color:#2563eb;'><b>${txt.totalCouponDiscount}:</b> -${summary.totalCouponDiscount.toFixed(2)} ${txt.currency}</div>`;
+      sumarHtmlOnline += `<div style='margin-bottom:8px;color:green;'><b>${txt.subtotalAfterDiscounts}:</b> ${summary.subtotalDupaReduceri.toFixed(2)} ${txt.currency}</div>`;
+    }
+    sumarHtmlOnline += `<div style='margin-bottom:8px;'><b>${txt.courierCostLabel} (${tipLivrareEmail}):</b> ${courierCostVal.toFixed(2)} ${txt.currency}</div>`;
+    sumarHtmlOnline += `<div style='margin-bottom:8px;'><b>${txt.paymentMethod}:</b> ${txt.cardOnline}</div>`;
+    sumarHtmlOnline += `<div style='margin-bottom:8px;'><b>${txt.totalNoVat}:</b> ${summary.totalFaraTVA.toFixed(2)} ${txt.currency}</div>`;
+    sumarHtmlOnline += `<div style='margin-bottom:8px;'><b>${txt.vat} (${TVA_PERCENT}%):</b> ${summary.tva.toFixed(2)} ${txt.currency}</div>`;
+    sumarHtmlOnline += `<div style='font-size:1.1rem; font-weight:700; margin-bottom:8px; color:#2563eb;'><b>${txt.totalWithVat}:</b> ${summary.totalCuTVA.toFixed(2)} ${txt.currency}</div>`;
+    
     let html = `<div style='font-family: Arial, sans-serif; max-width: 980px; margin: 0 auto; border:1px solid #e5e7eb; border-radius:8px; overflow-x:auto; background:#fff;'>
     <div style='background:#2563eb; color:#fff; padding:24px 48px;'>
       <h1 style='margin:0; font-size:2rem; font-weight:700; letter-spacing:1px;'>PREV-COR TPM</h1>
@@ -591,15 +659,7 @@ export async function POST(req: NextRequest) {
       <p style='margin-bottom:16px;'>${txt.orderReceived}</p>
       <div style='background:#f3f4f6; border-left:4px solid #2563eb; padding:12px 18px; margin-bottom:18px; color:#2563eb; font-size:1.08rem; font-weight:500;'>${txt.paidOnline}</div>
       <div style='overflow-x:auto;'>${tableHtml}</div>
-      <div style='margin-bottom:8px;'><b>${txt.subtotalSalePrice}:</b> ${summary.subtotal.toFixed(2)} ${txt.currency}</div>
-      <div style='margin-bottom:8px;color:#ea580c;'><b>${txt.totalProductDiscount}:</b> -${summary.totalProductDiscount.toFixed(2)} ${txt.currency}</div>
-      <div style='margin-bottom:8px;color:#2563eb;'><b>${txt.totalCouponDiscount}:</b> -${summary.totalCouponDiscount.toFixed(2)} ${txt.currency}</div>
-      <div style='margin-bottom:8px;color:green;'><b>${txt.subtotalAfterDiscounts}:</b> ${summary.subtotalDupaReduceri.toFixed(2)} ${txt.currency}</div>
-      <div style='margin-bottom:8px;'><b>${txt.courierCostLabel} (${tipLivrareEmail}):</b> ${courierCostVal.toFixed(2)} ${txt.currency}</div>
-      <div style='margin-bottom:8px;'><b>${txt.paymentMethod}:</b> ${txt.cardOnline}</div>
-      <div style='margin-bottom:8px;'><b>${txt.totalNoVat}:</b> ${summary.totalFaraTVA.toFixed(2)} ${txt.currency}</div>
-      <div style='margin-bottom:8px;'><b>${txt.vat} (${TVA_PERCENT}%):</b> ${summary.tva.toFixed(2)} ${txt.currency}</div>
-      <div style='font-size:1.1rem; font-weight:700; margin-bottom:8px; color:#2563eb;'><b>${txt.totalWithVat}:</b> ${summary.totalCuTVA.toFixed(2)} ${txt.currency}</div>
+      ${sumarHtmlOnline}
       <div style='margin-bottom:4px;'><b>${txt.deliveryAddress}:</b> ${adresaLivrare}</div>
       <div style='margin-bottom:4px;'><b>${txt.phone}:</b> ${telefon}</div>
       <div style='margin-top:16px; color:#2563eb; font-weight:600;'><a href='#' style='color:#2563eb;text-decoration:none;'>${txt.thankYou}</a><br/>${txt.team}</div>
@@ -632,9 +692,15 @@ export async function POST(req: NextRequest) {
     let telefonText = client.phone || '';
     let tipLivrareText = typeof deliveryType === 'string' && deliveryType.trim() ? deliveryType.trim() : '';
     let text = `${txt.hello},\n\n${txt.paidOnline}\n\n${produseText}\n\n${txt.subtotalSalePrice}: ${subtotalPretVanzare.toFixed(2)} ${txt.currency}\n${txt.subtotalAfterDiscounts}: ${subtotalDupaReduceri.toFixed(2)} ${txt.currency}\n${txt.totalProductDiscount}: -${reducereTotala.toFixed(2)} ${txt.currency}\n${txt.courierCostLabel} (${tipLivrareText}): ${courierCostVal.toFixed(2)} ${txt.currency}\n${txt.totalNoVat}: ${totalFaraTVA.toFixed(2)} ${txt.currency}\n${txt.vat} (${TVA_PERCENT}%): ${tva.toFixed(2)} ${txt.currency}\n${txt.totalWithVat}: ${totalCuTVA.toFixed(2)} ${txt.currency}\n\n${txt.deliveryAddress}: ${adresaLivrareText}\n${txt.phone}: ${telefonText}\n\n${txt.team}\n\n${txt.autoEmail} ${COMPANY_CONFIG.email}.`;
+    
+    // Subiect cu număr comandă pentru a nu fi grupate în Gmail
+    const emailSubjectWithId = lang === 'en' 
+      ? `Order confirmation #${order.id} - PREV-COR TPM`
+      : `Confirmare comandă #${order.id} - PREV-COR TPM`;
+    
     await sendEmail({
       to: userEmail,
-      subject: txt.emailSubject,
+      subject: emailSubjectWithId,
       text,
       html,
       attachments: [

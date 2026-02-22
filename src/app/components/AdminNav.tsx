@@ -24,7 +24,12 @@ export default function AdminNav() {
         <Link href="/admin/dashboard"><span className="bg-blue-600 text-white px-4 py-2 rounded font-semibold hover:bg-blue-700 transition">Dashboard</span></Link>
         <Link href="/admin/orders"><span className="bg-blue-600 text-white px-4 py-2 rounded font-semibold hover:bg-blue-700 transition">Comenzi</span></Link>
         <Link href="/admin/manual-orders"><span className="bg-blue-600 text-white px-4 py-2 rounded font-semibold hover:bg-blue-700 transition">Comenzi manuale</span></Link>
-        <Link href="/admin/products"><span className="bg-blue-600 text-white px-4 py-2 rounded font-semibold hover:bg-blue-700 transition">Produse</span></Link>
+        <Link href="/admin/adauga-produs-ro"><span className="bg-teal-600 text-white px-4 py-2 rounded font-semibold hover:bg-teal-700 transition">➕ Produs RO</span></Link>
+        <Link href="/admin/adauga-produs-en"><span className="bg-green-600 text-white px-4 py-2 rounded font-semibold hover:bg-green-700 transition">➕ Produs EN</span></Link>
+        <Link href="/admin/variante-ro"><span className="bg-purple-600 text-white px-4 py-2 rounded font-semibold hover:bg-purple-700 transition">📦 Variante RO</span></Link>
+        <Link href="/admin/variante-en"><span className="bg-blue-600 text-white px-4 py-2 rounded font-semibold hover:bg-blue-700 transition">📦 Variante EN</span></Link>
+        <Link href="/admin/categorii-produse"><span className="bg-amber-600 text-white px-4 py-2 rounded font-semibold hover:bg-amber-700 transition">🏷️ Categorii</span></Link>
+        <Link href="/admin/gama-produse"><span className="bg-violet-600 text-white px-4 py-2 rounded font-semibold hover:bg-violet-700 transition">📂 Gama</span></Link>
         <Link href="/admin/coupons"><span className="bg-blue-600 text-white px-4 py-2 rounded font-semibold hover:bg-blue-700 transition">Cupoane</span></Link>
         <Link href="/admin/promotii"><span className="bg-purple-600 text-white px-4 py-2 rounded font-semibold hover:bg-purple-700 transition">Promoții</span></Link>
         <Link href="/admin/recenzii"><span className="bg-amber-600 text-white px-4 py-2 rounded font-semibold hover:bg-amber-700 transition">Recenzii</span></Link>

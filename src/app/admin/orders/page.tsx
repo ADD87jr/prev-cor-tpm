@@ -4,11 +4,13 @@ import OrderDetailsModal from "../OrderDetailsModal";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Toast from "@/components/Toast";
+import ConfirmModal from "@/components/ConfirmModal";
 
 export default function AdminOrdersPage() {
   // Toast state
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [defaultTva, setDefaultTva] = useState(19);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
   
   // Încarcă TVA configurat din admin
   useEffect(() => {
@@ -46,6 +48,7 @@ export default function AdminOrdersPage() {
   const [clientFilter, setClientFilter] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [modalOrder, setModalOrder] = useState<any | null>(null);
+  const [deleteOrderId, setDeleteOrderId] = useState<number | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -78,7 +81,7 @@ export default function AdminOrdersPage() {
   function normalizeItems(items: any[]) {
     return (items || [])
       .map(i => ({ id: i.id, name: (i.name || '').trim(), quantity: Number(i.quantity || i.qty || 1) }))
-      .sort((a, b) => (a.id || '').localeCompare(b.id || '') || a.name.localeCompare(b.name) || a.quantity - b.quantity);
+      .sort((a, b) => String(a.id || '').localeCompare(String(b.id || '')) || a.name.localeCompare(b.name) || a.quantity - b.quantity);
   }
   const groups = new Map<string, any[]>();
   for (const order of orders) {
@@ -134,24 +137,36 @@ export default function AdminOrdersPage() {
           </div>
           <div>
             <button
-              onClick={async () => {
-                if (window.confirm("Sigur vrei să ștergi toate comenzile și să resetezi numerotarea?")) {
-                  const res = await fetch("/api/orders/reset", { method: "POST" });
-                  if (res.ok) {
-                    showToast("Comenzile au fost șterse și numerotarea resetată!", "success");
-                    window.location.reload();
-                  } else {
-                    const data = await res.json();
-                    showToast("Eroare la resetare: " + (data?.error || res.status), "error");
-                  }
-                }
-              }}
+              onClick={() => setShowResetConfirm(true)}
               className="ml-2 px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 font-bold"
             >
               Resetează comenzi
             </button>
           </div>
         </div>
+
+        {/* Modal confirmare resetare */}
+        <ConfirmModal
+          isOpen={showResetConfirm}
+          title="Resetare comenzi"
+          message="Sigur vrei să ștergi toate comenzile și să resetezi numerotarea? Această acțiune este ireversibilă!"
+          confirmText="Da, șterge tot"
+          cancelText="Anulează"
+          confirmColor="red"
+          icon="danger"
+          onConfirm={async () => {
+            setShowResetConfirm(false);
+            const res = await fetch("/api/orders/reset", { method: "POST" });
+            if (res.ok) {
+              showToast("Comenzile au fost șterse și numerotarea resetată!", "success");
+              window.location.reload();
+            } else {
+              const data = await res.json();
+              showToast("Eroare la resetare: " + (data?.error || res.status), "error");
+            }
+          }}
+          onCancel={() => setShowResetConfirm(false)}
+        />
         <div className="flex gap-4 mb-6 ml-4 flex-wrap">
           <div className="bg-blue-100 rounded px-4 py-2 text-blue-900 font-semibold">
             <span>Comenzi noi: </span>
@@ -238,19 +253,9 @@ export default function AdminOrdersPage() {
                     const coupon = order.appliedCoupon || order.coupon || null;
                     const subtotalDupaProduseDiscount = Array.isArray(order.items)
                       ? order.items.reduce((acc: number, item: any) => {
+                          // Prețul deja include reducerea de produs - nu aplicăm discount suplimentar
                           const price = typeof item.price === 'number' ? item.price : 0;
-                          let discount = typeof item.discount === 'number' ? item.discount : 0;
-                          if (discount > 1 && discount <= 100) discount = discount / 100;
-                          if (discount > 1) discount = 1;
-                          if (discount < 0) discount = 0;
-                          let priceWithDiscount = price;
-                          if (item.discountType === 'percent' || (!item.discountType && discount > 0)) {
-                            priceWithDiscount = price * (1 - discount);
-                          } else if (item.discountType === 'fixed') {
-                            priceWithDiscount = price - discount;
-                          }
-                          if (priceWithDiscount < 0) priceWithDiscount = 0;
-                          return acc + priceWithDiscount * (item.quantity ?? item.qty ?? 1);
+                          return acc + price * (item.quantity ?? item.qty ?? 1);
                         }, 0)
                       : 0;
                     let subtotal = subtotalDupaProduseDiscount;
@@ -362,17 +367,9 @@ export default function AdminOrdersPage() {
                   </button>
                   <button
                     className="bg-red-600 text-white px-2 py-1 rounded text-xs hover:bg-red-700 font-bold"
-                    onClick={async e => {
+                    onClick={e => {
                       e.stopPropagation();
-                      if (window.confirm("Sigur vrei să ștergi această comandă?")) {
-                        const res = await fetch(`/api/orders?id=${order.id}`, { method: "DELETE" });
-                        if (res.ok) {
-                          setOrders(orders => orders.filter(o => o.id !== order.id));
-                          showToast("Comandă ștearsă cu succes!", "success");
-                        } else {
-                          showToast("Eroare la ștergere comandă!", "error");
-                        }
-                      }
+                      setDeleteOrderId(order.id);
                     }}
                   >
                     Șterge
@@ -383,6 +380,31 @@ export default function AdminOrdersPage() {
           </tbody>
         </table>
       )}
+
+      {/* Modal confirmare ștergere comandă individuală */}
+      <ConfirmModal
+        isOpen={deleteOrderId !== null}
+        title="Ștergere comandă"
+        message="Sigur vrei să ștergi această comandă? Acțiunea este ireversibilă."
+        confirmText="Da, șterge"
+        cancelText="Anulează"
+        confirmColor="red"
+        icon="danger"
+        onConfirm={async () => {
+          if (deleteOrderId) {
+            const res = await fetch(`/api/orders?id=${deleteOrderId}`, { method: "DELETE" });
+            if (res.ok) {
+              setOrders(orders => orders.filter(o => o.id !== deleteOrderId));
+              showToast("Comandă ștearsă cu succes!", "success");
+            } else {
+              showToast("Eroare la ștergere comandă!", "error");
+            }
+          }
+          setDeleteOrderId(null);
+        }}
+        onCancel={() => setDeleteOrderId(null)}
+      />
+
       <OrderDetailsModal open={modalOpen} onClose={() => setModalOpen(false)} orders={modalOrder ? [modalOrder] : []} />
     </div>
   );

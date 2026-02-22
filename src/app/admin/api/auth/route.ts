@@ -89,8 +89,8 @@ export async function POST(req: NextRequest) {
     // Clear failed attempts on successful login
     clearFailedAttempts(clientIp);
 
-    // Generează JWT token (valid 30 minute pentru securitate)
-    const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minute
+    // Generează JWT token (valid 1 an - nu expiră automat)
+    const expiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 1 an
     const adminId = "admin"; // OBS: Ar trebui să folosești un ID real
 
     const token = await new SignJWT({ adminId, authenticatedAt: Date.now(), expiresAt: expiresAt.getTime() })
@@ -120,8 +120,8 @@ export async function POST(req: NextRequest) {
     response.cookies.set("adminSession", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 30 * 60, // 30 minute
+      sameSite: "lax",
+      maxAge: 365 * 24 * 60 * 60, // 1 an
       path: "/",
     });
 
@@ -139,24 +139,28 @@ export async function POST(req: NextRequest) {
  */
 export async function GET(req: NextRequest) {
   try {
-    const { cookies } = await import("next/headers");
-    const cookieStore = await cookies();
-    const token = cookieStore.get("adminSession")?.value;
+    const token = req.cookies.get("adminSession")?.value;
 
     if (!token) {
       return NextResponse.json({ authenticated: false }, { status: 401 });
     }
 
-    // Verifică validitatea token-ul din DB
-    const session = await prisma.adminSession.findUnique({
-      where: { token },
-    });
-
-    if (!session || session.expiresAt < new Date()) {
+    // Verifică validitatea JWT-ului direct (fără DB)
+    const { jwtVerify } = await import("jose");
+    try {
+      const verified = await jwtVerify(token, JWT_SECRET);
+      const payload = verified.payload as any;
+      
+      // Verifică expirare
+      if (payload.expiresAt && payload.expiresAt < Date.now()) {
+        return NextResponse.json({ authenticated: false }, { status: 401 });
+      }
+      
+      return NextResponse.json({ authenticated: true, adminId: payload.adminId || "admin" });
+    } catch (jwtError) {
+      // JWT invalid
       return NextResponse.json({ authenticated: false }, { status: 401 });
     }
-
-    return NextResponse.json({ authenticated: true, adminId: session.adminId });
   } catch (error) {
     console.error("[AUTH GET] Error:", error);
     return NextResponse.json({ authenticated: false }, { status: 401 });
@@ -168,9 +172,7 @@ export async function GET(req: NextRequest) {
  */
 export async function DELETE(req: NextRequest) {
   try {
-    const { cookies } = await import("next/headers");
-    const cookieStore = await cookies();
-    const token = cookieStore.get("adminSession")?.value;
+    const token = req.cookies.get("adminSession")?.value;
 
     if (token) {
       // Șterge sesiunea din baza de date

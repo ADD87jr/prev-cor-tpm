@@ -22,6 +22,8 @@ export type CartItem = {
   variantId?: number; // ID varianta din ProductVariant
   variantCode?: string; // cod varianta (SKU)
   variantInfo?: string; // info suplimentar (compatibilitate etc)
+  // Pe comandă
+  onDemand?: boolean; // produs disponibil pe comandă
 };
 
 type CartContextType = {

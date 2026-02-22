@@ -16,6 +16,7 @@ import { RecentlyViewedProvider } from "./_components/RecentlyViewedContext";
 import { LanguageProvider } from "./_components/LanguageContext";
 import LiveChatWidget from "./_components/LiveChatWidget";
 import MaintenanceWrapper from "./_components/MaintenanceWrapper";
+import SentryProvider from "./_components/SentryProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -87,6 +88,7 @@ export default function RootLayout({
               <CartProvider>
                 <CompareProvider>
                   <RecentlyViewedProvider>
+                    <SentryProvider>
                     <MaintenanceWrapper>
                       <Navbar />
                       {children}
@@ -95,6 +97,7 @@ export default function RootLayout({
                       <CookieConsent />
                       <LiveChatWidget />
                     </MaintenanceWrapper>
+                    </SentryProvider>
                   </RecentlyViewedProvider>
                 </CompareProvider>
               </CartProvider>

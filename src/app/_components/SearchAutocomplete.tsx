@@ -83,7 +83,9 @@ export default function SearchAutocomplete() {
       <div className="relative">
         <input
           ref={inputRef}
-          type="text"
+          type="search"
+          name="product-search"
+          autoComplete="off"
           placeholder={language === "en" ? "Search products..." : "Caută produse..."}
           value={query}
           onChange={(e) => setQuery(e.target.value)}

@@ -5,6 +5,7 @@ import { getTvaPercent } from "@/lib/getTvaPercent";
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: "2025-10-29.clover" });
 
 export async function POST(req: NextRequest) {
+  try {
     const body = await req.json();
     let { items, client, userEmail, paymentMethod, deliveryType, courierCost, appliedCoupon, orderId, tvaPercent, manualOrderId, language } = body;
     // Parsează dacă sunt stringuri (pentru fluxul manual)
@@ -73,6 +74,7 @@ export async function POST(req: NextRequest) {
     });
   }
   // Stripe metadata: pentru comenzi manuale trimite DOAR manualOrderId și userEmail (pentru a evita limitele Stripe)
+  // IMPORTANT: Stripe metadata are limită de 500 caractere per valoare!
   const orderMeta: Record<string, string> = {};
   // Always include language for translations
   orderMeta.language = language || 'ro';
@@ -80,10 +82,24 @@ export async function POST(req: NextRequest) {
     orderMeta.manualOrderId = String(manualOrderId || orderId);
     orderMeta.userEmail = userEmail || (parsedClient?.email || '');
   } else {
-    // Pentru comenzi online normale, trimite toate datele necesare în metadata
+    // Pentru comenzi online normale, trimite doar date minime (< 500 chars fiecare)
     orderMeta.userEmail = userEmail || (parsedClient?.email || '');
-    orderMeta.items = JSON.stringify(parsedItems);
-    orderMeta.client = JSON.stringify(parsedClient);
+    // items: doar id, variantId, qty (restul se recuperează din DB)
+    const minItems = parsedItems.map((i: any) => ({
+      id: i.id,
+      vid: i.variantId || null,
+      qty: i.quantity,
+      p: i.discountedPrice ?? i.price
+    }));
+    orderMeta.items = JSON.stringify(minItems).substring(0, 500);
+    // client: doar date esențiale
+    const minClient = {
+      tip: parsedClient?.tipClient,
+      name: parsedClient?.name || parsedClient?.denumire,
+      email: parsedClient?.email,
+      phone: parsedClient?.phone || parsedClient?.telefon
+    };
+    orderMeta.client = JSON.stringify(minClient).substring(0, 500);
     orderMeta.courierCost = String(courierCost ?? '');
     orderMeta.deliveryType = String(deliveryType ?? '');
     orderMeta.paymentMethod = String(paymentMethod ?? 'card');
@@ -104,4 +120,8 @@ export async function POST(req: NextRequest) {
     metadata: orderMeta
   });
   return NextResponse.json({ url: session.url });
+  } catch (error: any) {
+    console.error('[create-checkout-session] Error:', error);
+    return NextResponse.json({ error: error?.message || 'Eroare la inițializarea plății Stripe' }, { status: 500 });
+  }
 }

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Toast from "@/components/Toast";
+import ConfirmModal from "@/components/ConfirmModal";
 
 interface Coupon {
   id: number;
@@ -14,6 +15,7 @@ interface Coupon {
 export default function AdminCouponsPage() {
   // Toast state
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [deleteCouponId, setDeleteCouponId] = useState<number | null>(null);
   function showToast(message: string, type: 'success' | 'error' = 'success') {
     setToast({ message, type });
     setTimeout(() => setToast(null), 2500);
@@ -44,14 +46,19 @@ export default function AdminCouponsPage() {
     setProducts(data);
   }
   async function handleDeleteCoupon(id: number) {
-    if (!window.confirm("Sigur vrei să ștergi acest cupon?")) return;
-    const res = await fetch(`/admin/api/coupons?id=${id}`, { method: "DELETE" });
+    setDeleteCouponId(id);
+  }
+  
+  async function confirmDeleteCoupon() {
+    if (!deleteCouponId) return;
+    const res = await fetch(`/admin/api/coupons?id=${deleteCouponId}`, { method: "DELETE" });
     if (res.ok) {
       showToast("Cupon șters cu succes!", "success");
       fetchCoupons();
     } else {
       showToast("Eroare la ștergere cupon!", "error");
     }
+    setDeleteCouponId(null);
   }
   async function handleAddCoupon(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -247,6 +254,19 @@ export default function AdminCouponsPage() {
           }}
         >Aplică pe produs</button>
       </div>
+
+      {/* Modal confirmare ștergere cupon */}
+      <ConfirmModal
+        isOpen={deleteCouponId !== null}
+        title="Ștergere cupon"
+        message="Sigur vrei să ștergi acest cupon? Acțiunea este ireversibilă."
+        confirmText="Da, șterge"
+        cancelText="Anulează"
+        confirmColor="red"
+        icon="danger"
+        onConfirm={confirmDeleteCoupon}
+        onCancel={() => setDeleteCouponId(null)}
+      />
     </div>
   );
 }

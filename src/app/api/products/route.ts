@@ -3,8 +3,39 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from "@/lib/prisma";
 
 export async function GET() {
-  const products = await prisma.product.findMany();
-  return NextResponse.json(products);
+  const products = await prisma.product.findMany({
+    include: {
+      productVariants: {
+        where: { active: true },
+        select: { pret: true, listPrice: true }
+      }
+    }
+  });
+  
+  // Adaugă minVariantPrice și minVariantListPrice pentru fiecare produs
+  const productsWithVariantPrices = products.map(product => {
+    const variantsWithPrices = product.productVariants.filter(v => v.pret && v.pret > 0);
+    if (variantsWithPrices.length > 0) {
+      const minPrice = Math.min(...variantsWithPrices.map(v => v.pret!));
+      const variantWithMinPrice = variantsWithPrices.find(v => v.pret === minPrice);
+      return {
+        ...product,
+        productVariants: undefined, // Nu trimitem toate variantele în listing
+        hasVariants: true,
+        minVariantPrice: minPrice,
+        minVariantListPrice: variantWithMinPrice?.listPrice || null
+      };
+    }
+    return {
+      ...product,
+      productVariants: undefined,
+      hasVariants: product.productVariants.length > 0,
+      minVariantPrice: null,
+      minVariantListPrice: null
+    };
+  });
+  
+  return NextResponse.json(productsWithVariantPrices);
 }
 
 export async function POST(req: NextRequest) {

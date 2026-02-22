@@ -76,23 +76,33 @@ export async function POST(req: NextRequest) {
             if (variantId) {
               // Scade stocul din varianta selectată
               const variant = await tx.productVariant.findUnique({ where: { id: variantId } });
-              if (!variant || typeof variant.stoc !== 'number' || variant.stoc < item.quantity) {
+              // Skip verificare stoc dacă varianta este pe comandă (onDemand)
+              const isOnDemand = (variant as any)?.onDemand === true;
+              if (!isOnDemand && (!variant || typeof variant.stoc !== 'number' || variant.stoc < item.quantity)) {
                 throw new Error(`Stoc insuficient pentru varianta "${item.variantCode || variantId}" a produsului "${item.name || item.denumire || '-'}". Disponibil: ${variant ? variant.stoc : 0}. Vă rugăm să verificați stocul sau să alegeți altă variantă.`);
               }
-              await tx.productVariant.update({
-                where: { id: variantId, stoc: { gte: item.quantity } },
-                data: { stoc: { decrement: item.quantity } }
-              });
+              // Pentru onDemand, NU decrementăm stocul (nu există stoc fizic)
+              if (!isOnDemand) {
+                await tx.productVariant.update({
+                  where: { id: variantId },
+                  data: { stoc: { decrement: item.quantity } }
+                });
+              }
             } else {
               // Scade stocul din produsul principal (fără variante)
               const prod = await tx.product.findUnique({ where: { id: Number(item.id) } });
-              if (!prod || typeof prod.stock !== 'number' || prod.stock < item.quantity) {
+              // Skip verificare stoc dacă produsul este pe comandă (onDemand)
+              const isOnDemand = prod?.onDemand === true;
+              if (!isOnDemand && (!prod || typeof prod.stock !== 'number' || prod.stock < item.quantity)) {
                 throw new Error(`Stoc insuficient pentru produsul "${item.name || item.denumire || '-'}". Disponibil: ${prod ? prod.stock : 0}. Vă rugăm să verificați stocul sau să alegeți alt produs.`);
               }
-              await tx.product.update({
-                where: { id: Number(item.id), stock: { gte: item.quantity } },
-                data: { stock: { decrement: item.quantity } }
-              });
+              // Pentru onDemand, NU decrementăm stocul (nu există stoc fizic)
+              if (!isOnDemand) {
+                await tx.product.update({
+                  where: { id: Number(item.id) },
+                  data: { stock: { decrement: item.quantity } }
+                });
+              }
             }
           }
         }
@@ -118,6 +128,7 @@ export async function POST(req: NextRequest) {
           id: it.id,
           name: it.name || it.denumire,
           price: typeof it.price === 'number' ? it.price : 0,
+          listPrice: it.listPrice || null,
           quantity: typeof it.quantity === 'number' ? it.quantity : 1,
           discount: it.discount,
           discountType: it.discountType,
@@ -130,30 +141,19 @@ export async function POST(req: NextRequest) {
           couponDiscountValue: it.couponDiscount || null
         }));
         const summary = calculateCartSummary({ products: productsForSummary });
+        
+        // Verifică dacă există cupoane
+        const hasCouponManual = productsForSummary.some((item: any) => item.appliedCoupon || (typeof item.couponDiscountValue === 'number' && item.couponDiscountValue > 0));
+        
         // Reconstruiește array-ul cu stacking logic pe fiecare rând
         const itemsWithDiscount = productsForSummary.map((item: any) => {
+          // NU aplicăm discount suplimentar - prețul deja include reducerea de produs
           let priceAfterProductDiscount = item.price;
-          let productDiscount = 0;
-          
-          // Folosește valoarea pre-calculată dacă există, altfel calculează
-          if (typeof item.productDiscountValue === 'number' && item.productDiscountValue > 0) {
-            productDiscount = item.productDiscountValue;
-            priceAfterProductDiscount = item.price - productDiscount;
-          } else if (typeof item.discount === 'number' && item.discount > 0) {
-            if (item.discountType === 'percent' || !item.discountType) {
-              const percent = item.discount <= 1 ? item.discount * 100 : item.discount;
-              productDiscount = item.price * (percent / 100);
-            } else {
-              productDiscount = item.discount;
-            }
-            priceAfterProductDiscount = item.price - productDiscount;
-          }
-          if (priceAfterProductDiscount < 0) priceAfterProductDiscount = 0;
           
           let couponDiscount = 0;
           let priceAfterCoupon = priceAfterProductDiscount;
           
-          // Folosește valoarea pre-calculată pentru cupon dacă există
+          // Calculează doar cupon dacă există
           if (typeof item.couponDiscountValue === 'number' && item.couponDiscountValue > 0) {
             couponDiscount = item.couponDiscountValue;
             priceAfterCoupon = priceAfterProductDiscount - couponDiscount;
@@ -169,22 +169,37 @@ export async function POST(req: NextRequest) {
           if (priceAfterCoupon < 0) priceAfterCoupon = 0;
           return {
             ...item,
-            productDiscount,
             couponDiscount,
-            priceAfterProductDiscount,
             priceAfterCoupon,
             subtotal: priceAfterCoupon * item.quantity
           };
         });
         const subtotalVanzare = summary.subtotal;
         const subtotalDupaReduceri = summary.subtotalDupaReduceri;
-        const reducereTotalaProduse = summary.totalProductDiscount;
         const reducereTotalaCupon = summary.totalCouponDiscount;
         const courier = typeof createdOrder.courierCost === 'number' ? createdOrder.courierCost : 0;
         const totalFaraTVA = subtotalDupaReduceri + courier;
         const tvaPercent = typeof createdOrder.tva === 'number' ? createdOrder.tva : configTva;
         const tvaValoare = Math.round(totalFaraTVA * tvaPercent / 100 * 100) / 100;
         const totalCuTVA = Math.round((totalFaraTVA + tvaValoare) * 100) / 100;
+        
+        // Tabel simplificat - fără coloane de reducere produs
+        const tableHeadersManual = hasCouponManual
+          ? ['Nr.', 'Produs', 'Cant.', 'Preț', 'Red. cupon', 'Final', 'Subtotal', 'Livrare']
+          : ['Nr.', 'Produs', 'Cant.', 'Preț', 'Subtotal', 'Livrare'];
+        
+        // Sumar simplificat - fără linii de reducere când sunt 0
+        let sumarManual = `<div style="margin-bottom: 8px;">Subtotal preț de vânzare: <b>${subtotalVanzare.toFixed(2)} lei</b></div>`;
+        if (reducereTotalaCupon > 0) {
+          sumarManual += `<div style="margin-bottom: 8px; color: #2563eb;">Reducere totală cupon: <b>-${reducereTotalaCupon.toFixed(2)} lei</b></div>`;
+          sumarManual += `<div style="margin-bottom: 8px; color: #16a34a;">Subtotal după reduceri: <b>${subtotalDupaReduceri.toFixed(2)} lei</b></div>`;
+        }
+        sumarManual += `<div style="margin-bottom: 8px;">Cost curier (standard): <b>${courier.toFixed(2)} lei</b></div>`;
+        sumarManual += `<div style="margin-bottom: 8px;">Metodă de plată: <b>${createdOrder.paymentMethod || '-'}</b></div>`;
+        sumarManual += `<div style="margin-bottom: 8px;">Total fără TVA: <b>${totalFaraTVA.toFixed(2)} lei</b></div>`;
+        sumarManual += `<div style="margin-bottom: 8px;">TVA (${tvaPercent}%): <b>${tvaValoare.toFixed(2)} lei</b></div>`;
+        sumarManual += `<div style="font-size: 1.2rem; font-weight: bold; color: #2563eb; margin: 18px 0 8px 0;">Total de plată (cu TVA): ${totalCuTVA.toLocaleString('ro-RO', { minimumFractionDigits: 2 })} lei</div>`;
+        
         const html = `
 <div style="font-family: Arial, sans-serif; background: #f7f7f7; padding: 0; margin: 0;">
   <div style="max-width: 1000px; margin: 40px auto; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px #0001;">
@@ -205,42 +220,51 @@ export async function POST(req: NextRequest) {
       <table style="width: 100%; border-collapse: collapse; margin-bottom: 18px; font-size: 13px;">
         <thead>
           <tr style="background: #f1f5fb;">
-            <th style="padding: 8px 6px; border: 1px solid #e5e7eb; white-space: nowrap;">Nr.</th>
-            <th style="padding: 8px 6px; border: 1px solid #e5e7eb; white-space: nowrap;">Produs</th>
-            <th style="padding: 8px 6px; border: 1px solid #e5e7eb; white-space: nowrap;">Cant.</th>
-            <th style="padding: 8px 6px; border: 1px solid #e5e7eb; white-space: nowrap;">Preț</th>
-            <th style="padding: 8px 6px; border: 1px solid #e5e7eb; white-space: nowrap;">Red. produs</th>
-            <th style="padding: 8px 6px; border: 1px solid #e5e7eb; white-space: nowrap;">Red. cupon</th>
-            <th style="padding: 8px 6px; border: 1px solid #e5e7eb; white-space: nowrap;">Final</th>
-            <th style="padding: 8px 6px; border: 1px solid #e5e7eb; white-space: nowrap;">Subtotal</th>
-            <th style="padding: 8px 6px; border: 1px solid #e5e7eb; white-space: nowrap;">Livrare</th>
+            ${tableHeadersManual.map(h => `<th style="padding: 8px 6px; border: 1px solid #e5e7eb; white-space: nowrap;">${h}</th>`).join('')}
           </tr>
         </thead>
         <tbody>
-          ${itemsWithDiscount.map((item: any, idx: number) => `
-            <tr>
-              <td style="padding: 6px; border: 1px solid #e5e7eb; text-align: center;">${idx + 1}</td>
-              <td style="padding: 6px; border: 1px solid #e5e7eb; white-space: nowrap;">${item.name || '-'}${item.variantCode ? `<br/><span style='font-size:11px;color:#666;'>(${item.variantCode}${item.variantInfo ? ' - ' + item.variantInfo : ''})</span>` : ''}</td>
-              <td style="padding: 6px; border: 1px solid #e5e7eb; text-align: center;">${item.quantity || 1}</td>
-              <td style="padding: 6px; border: 1px solid #e5e7eb; white-space: nowrap;">${typeof item.price === 'number' ? item.price.toFixed(2) : '-'} lei</td>
-              <td style="padding: 6px; border: 1px solid #e5e7eb; color: #ea580c; white-space: nowrap;">${item.productDiscount !== 0 ? (item.productDiscount > 0 ? '-' + item.productDiscount.toFixed(2) + ' lei' : item.productDiscount.toFixed(2) + ' lei') : '-'}</td>
-              <td style="padding: 6px; border: 1px solid #e5e7eb; color: #2563eb; white-space: nowrap;">${item.couponDiscount !== 0 ? (item.couponDiscount > 0 ? '-' + item.couponDiscount.toFixed(2) + ' lei' : item.couponDiscount.toFixed(2) + ' lei') : '-'}</td>
-              <td style="padding: 6px; border: 1px solid #e5e7eb; white-space: nowrap;">${item.priceAfterCoupon.toFixed(2)} lei</td>
-              <td style="padding: 6px; border: 1px solid #e5e7eb; white-space: nowrap;">${item.subtotal.toFixed(2)} lei</td>
-              <td style="padding: 6px; border: 1px solid #e5e7eb; white-space: nowrap;">${item.deliveryTime || '-'}</td>
-            </tr>
-          `).join('')}
+          ${itemsWithDiscount.map((item: any, idx: number) => {
+            // Verifică dacă există discount de produs (listPrice > price)
+            const hasProductDiscount = item.listPrice && item.listPrice > item.price;
+            
+            // Construiește celula de preț cu discount afișat ca în coș
+            let priceCell = '';
+            if (hasProductDiscount) {
+              priceCell = `<span style='text-decoration:line-through;color:#9ca3af;font-size:0.9em;'>${item.listPrice.toFixed(2)} lei</span><br/>` +
+                `<span style='font-weight:600;'>${item.price.toFixed(2)} lei</span>`;
+              if (item.discount && item.discount > 0) {
+                priceCell += `<br/><span style='color:#16a34a;font-size:0.85em;'>(-${item.discount}%)</span>`;
+              }
+            } else {
+              priceCell = `${typeof item.price === 'number' ? item.price.toFixed(2) : '-'} lei`;
+            }
+            
+            if (hasCouponManual) {
+              return `<tr>
+                <td style="padding: 6px; border: 1px solid #e5e7eb; text-align: center;">${idx + 1}</td>
+                <td style="padding: 6px; border: 1px solid #e5e7eb; white-space: nowrap;">${item.name || '-'}${item.variantCode ? `<br/><span style='font-size:11px;color:#666;'>(${item.variantCode}${item.variantInfo ? ' - ' + item.variantInfo : ''})</span>` : ''}</td>
+                <td style="padding: 6px; border: 1px solid #e5e7eb; text-align: center;">${item.quantity || 1}</td>
+                <td style="padding: 6px; border: 1px solid #e5e7eb; white-space: nowrap;">${priceCell}</td>
+                <td style="padding: 6px; border: 1px solid #e5e7eb; color: #2563eb; white-space: nowrap;">${item.couponDiscount > 0 ? '-' + item.couponDiscount.toFixed(2) + ' lei' : '-'}</td>
+                <td style="padding: 6px; border: 1px solid #e5e7eb; white-space: nowrap;">${item.priceAfterCoupon.toFixed(2)} lei</td>
+                <td style="padding: 6px; border: 1px solid #e5e7eb; white-space: nowrap;">${item.subtotal.toFixed(2)} lei</td>
+                <td style="padding: 6px; border: 1px solid #e5e7eb; white-space: nowrap;">${item.deliveryTime || '-'}</td>
+              </tr>`;
+            } else {
+              return `<tr>
+                <td style="padding: 6px; border: 1px solid #e5e7eb; text-align: center;">${idx + 1}</td>
+                <td style="padding: 6px; border: 1px solid #e5e7eb; white-space: nowrap;">${item.name || '-'}${item.variantCode ? `<br/><span style='font-size:11px;color:#666;'>(${item.variantCode}${item.variantInfo ? ' - ' + item.variantInfo : ''})</span>` : ''}</td>
+                <td style="padding: 6px; border: 1px solid #e5e7eb; text-align: center;">${item.quantity || 1}</td>
+                <td style="padding: 6px; border: 1px solid #e5e7eb; white-space: nowrap;">${priceCell}</td>
+                <td style="padding: 6px; border: 1px solid #e5e7eb; white-space: nowrap;">${item.subtotal.toFixed(2)} lei</td>
+                <td style="padding: 6px; border: 1px solid #e5e7eb; white-space: nowrap;">${item.deliveryTime || '-'}</td>
+              </tr>`;
+            }
+          }).join('')}
         </tbody>
       </table>
-      <div style="margin-bottom: 8px;">Subtotal preț de vânzare: <b>${subtotalVanzare.toFixed(2)} lei</b></div>
-      <div style="margin-bottom: 8px; color: #ea580c;">Reducere totală produse: <b>-${reducereTotalaProduse.toFixed(2)} lei</b></div>
-      <div style="margin-bottom: 8px; color: #2563eb;">Reducere totală cupon: <b>-${reducereTotalaCupon.toFixed(2)} lei</b></div>
-      <div style="margin-bottom: 8px; color: #16a34a;">Subtotal după reduceri: <b>${subtotalDupaReduceri.toFixed(2)} lei</b></div>
-      <div style=\"margin-bottom: 8px;\">Cost curier (standard): <b>${courier.toFixed(2)} lei</b></div>
-      <div style=\"margin-bottom: 8px;\">Metodă de plată: <b>${createdOrder.paymentMethod || '-'}</b></div>
-      <div style=\"margin-bottom: 8px;\">Total fără TVA: <b>${totalFaraTVA.toFixed(2)} lei</b></div>
-      <div style=\"margin-bottom: 8px;\">TVA (${tvaPercent}%): <b>${tvaValoare.toFixed(2)} lei</b></div>
-      <div style=\"font-size: 1.2rem; font-weight: bold; color: #2563eb; margin: 18px 0 8px 0;\">Total de plată (cu TVA): ${totalCuTVA.toLocaleString('ro-RO', { minimumFractionDigits: 2 })} lei</div>
+      ${sumarManual}
       <!-- adresă livrare completă -->
       <div style=\"margin-bottom: 8px;\">Adresă livrare: <b>${[
         clientData.adresa || clientData.adress || clientData.adresaSediu,
@@ -262,7 +286,7 @@ export async function POST(req: NextRequest) {
         `;
         await sendEmail({
           to: email,
-          subject: 'Confirmare comandă PREV-COR TPM',
+          subject: `Confirmare comandă #${createdOrder.id} - PREV-COR TPM`,
           text: 'Comanda ta a fost înregistrată cu succes! Vezi detalii în atașamentul PDF.',
           html,
           attachments: [

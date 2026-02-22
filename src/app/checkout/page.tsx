@@ -43,6 +43,7 @@ function CheckoutPageInner() {
     paymentError: language === "en" ? "Error initiating online payment." : "Eroare la inițializarea plății online.",
     orderError: language === "en" ? "Error processing order." : "Eroare la procesarea comenzii.",
     fillField: language === "en" ? "Please fill in:" : "Completează câmpul:",
+    onDemandNoRamburs: language === "en" ? "COD/Installments not available for on-demand products." : "Ramburs/Rate indisponibile pt. produse pe comandă.",
   };
   // La montarea paginii, dacă contextItems e gol, citește din localStorage
   useEffect(() => {
@@ -83,6 +84,8 @@ function CheckoutPageInner() {
   const [submitted, setSubmitted] = useState(false);
   // TVA configurabil din admin
   const [TVA_PERCENT, setTvaPercent] = useState(21);
+  // State pentru verificarea produselor onDemand (din DB)
+  const [hasOnDemandProducts, setHasOnDemandProducts] = useState(false);
   
   // Încarcă TVA din setările admin
   useEffect(() => {
@@ -95,6 +98,38 @@ function CheckoutPageInner() {
       })
       .catch(() => {});
   }, []);
+
+  // Verifică onDemand din DB pentru produsele din coș
+  useEffect(() => {
+    const checkOnDemand = async () => {
+      if (!items || items.length === 0) return;
+      
+      // Verifică direct din flag-urile din coș (dacă există)
+      const hasFromCart = items.some(item => item.onDemand === true);
+      if (hasFromCart) {
+        setHasOnDemandProducts(true);
+        return;
+      }
+      
+      // Fallback: verifică din API dacă coșul nu are flag-uri onDemand
+      try {
+        const productIds = [...new Set(items.map(item => item.id))];
+        const variantIds = items.filter(i => i.variantId).map(i => i.variantId);
+        const res = await fetch('/api/check-ondemand', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ productIds, variantIds })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setHasOnDemandProducts(data.hasOnDemand === true);
+        }
+      } catch (e) {
+        console.log('onDemand check failed:', e);
+      }
+    };
+    checkOnDemand();
+  }, [items]);
 
   // Pentru consistență, construim array de produse pentru utilitarul de sumar
   const summaryProducts = Array.isArray(items) ? items.map(item => ({
@@ -270,24 +305,11 @@ function CheckoutPageInner() {
       }
       console.log('[DEBUG] globalAppliedCoupon:', globalAppliedCoupon);
       const itemsWithDiscount = effectiveItems.map((item: any) => {
-        // STACKING LOGIC: 1. Mai întâi reducerea de produs, 2. Apoi cuponul pe prețul redus
+        // NU aplicăm item.discount - prețul din item.price este deja cu reducerea aplicată
         let priceAfterProductDiscount = item.price;
         let productDiscount = 0;
         
-        // Pas 1: Aplică reducerea de produs (dacă există)
-        if (typeof item.discount === 'number' && item.discount > 0) {
-          if (item.discountType === 'percent' || !item.discountType) {
-            // Tratează ca procent by default
-            const percent = item.discount <= 1 ? item.discount : item.discount / 100;
-            productDiscount = item.price * percent;
-          } else {
-            productDiscount = item.discount;
-          }
-          priceAfterProductDiscount = item.price - productDiscount;
-        }
-        if (priceAfterProductDiscount < 0) priceAfterProductDiscount = 0;
-        
-        // Pas 2: Aplică cuponul pe prețul deja redus
+        // Aplică cuponul pe preț (reducerea e deja inclusă în price)
         let appliedCoupon = item.appliedCoupon || globalAppliedCoupon || null;
         let couponDiscount = 0;
         let discountedPrice = priceAfterProductDiscount;
@@ -343,7 +365,14 @@ function CheckoutPageInner() {
         })
       });
       if (paymentMethod === "card") {
-        const data = await res.json();
+        let data: any = {};
+        try {
+          const text = await res.text();
+          data = text ? JSON.parse(text) : {};
+        } catch {
+          alert("Eroare la inițializarea plății online.");
+          return;
+        }
         if (res.ok && data.url) {
           if (typeof window !== 'undefined') {
             localStorage.removeItem('checkout_manualOrderId');
@@ -404,10 +433,13 @@ function CheckoutPageInner() {
           <label className="font-medium">{txt.paymentMethod}</label>
           <select name="paymentMethod" value={paymentMethod} onChange={handleChange} className="border rounded px-2 py-1">
             <option value="card">{txt.cardOnline}</option>
-            <option value="ramburs">{txt.cashOnDelivery}</option>
+            {!hasOnDemandProducts && <option value="ramburs">{txt.cashOnDelivery}</option>}
             <option value="transfer">{txt.bankTransfer}</option>
-            <option value="rate">{txt.installments}</option>
+            {!hasOnDemandProducts && <option value="rate">{txt.installments}</option>}
           </select>
+          {hasOnDemandProducts && (
+            <span className="text-xs text-orange-600 ml-2">{txt.onDemandNoRamburs}</span>
+          )}
         </div>
         <h2 className="text-xl font-bold mb-2">{txt.clientData}</h2>
         <div className="flex gap-4">

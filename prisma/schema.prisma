@@ -55,16 +55,32 @@ model ProductVariant {
   id            Int     @id @default(autoincrement())
   productId     Int
   code          String  // cod variantă (ex: SKU variantă)
+  // Atribute tehnice pentru senzori și componente industriale
+  marime        String? // mărime (ex: M4, M8, M12)
+  marimeEn      String? // mărime - traducere engleză
+  distantaSesizare String? // distanță de sesizare (ex: 0.6 mm, 1 mm)
+  tipIesire     String? // tip ieșire (ex: PNP, NPN)
+  tipContact    String? // tip contact (ex: NO, NC, NO+NC)
+  tensiune      String? // tensiune alimentare (ex: 10-30V DC)
+  curent        String? // curent maxim (ex: 200mA)
+  protectie     String? // clasă protecție (ex: IP67)
+  material      String? // material carcasă (ex: Oțel inox, Alamă nichelată)
+  cablu         String? // tip cablu (ex: 2m PVC, Conector M8)
+  // Câmpuri existente
   compatibil    String? // compatibilitate
   compatibilEn  String? // compatibilitate - traducere engleză
   greutate      Float?  // greutate (în kg)
   stoc          Int     @default(0) // stoc variantă
-  pret          Float?  // preț variantă (dacă diferit de produs)
+  pret          Float?  // preț variantă (prețul de vânzare)
+  listPrice     Float?  // preț de listă (prețul inițial, fără reducere)
+  purchasePrice Float?  // preț de achiziție (preț intrare)
   modAmbalare   String? // mod de ambalare (ex: buc, set, palet)
   modAmbalareEn String? // mod de ambalare - traducere engleză
   descriere     String? // descriere variantă
   descriereEn   String? // descriere variantă - traducere engleză
+  specsExtra    Json?   // specificații suplimentare în format JSON
   active        Boolean @default(true)
+  onDemand      Boolean @default(false) // variantă disponibilă doar pe comandă
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   product       Product @relation(fields: [productId], references: [id], onDelete: Cascade)

@@ -46,10 +46,12 @@ export default function ContactPage() {
     codPostal: "",
     program: "Luni - Vineri: 08:00 - 17:00",
   });
+  const [companyName, setCompanyName] = useState("PREV-COR TPM");
 
   // Încarcă datele companiei din API
   useEffect(() => {
     fetchCompanyConfig().then((config) => {
+      setCompanyName(config.shortName || config.name || "PREV-COR TPM");
       setContactInfo((prev) => ({
         ...prev,
         telefon: config.phone,
@@ -142,8 +144,11 @@ export default function ContactPage() {
         {/* Informații de contact */}
         <div className="bg-white rounded-xl shadow p-6 flex flex-col gap-4 justify-center">
           <h2 className="text-xl font-semibold text-blue-700 mb-2">{txt.contactInfo}</h2>
+          <div className="flex items-center gap-3"><span className="text-2xl">🏢</span> <span className="font-bold text-lg text-blue-800">{companyName}</span></div>
           <div className="flex items-center gap-3"><span className="text-2xl">📞</span> <span className="font-medium">{txt.phone}:</span> <a href={`tel:${contactInfo.telefon.replace(/\s/g, '')}`} className="text-blue-600 hover:underline">{contactInfo.telefon}</a></div>
           <div className="flex items-center gap-3"><span className="text-2xl">✉️</span> <span className="font-medium">{txt.email}:</span> <a href={`mailto:${contactInfo.email}`} className="text-blue-600 hover:underline">{contactInfo.email}</a></div>
+          <div className="flex items-center gap-3"><span className="text-2xl">🌐</span> <span className="font-medium">Website:</span> <a href="https://www.prevcortpm.ro" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">www.prevcortpm.ro</a></div>
+          <div className="flex items-center gap-3"><span className="text-2xl">📘</span> <span className="font-medium">Facebook:</span> <a href="https://www.facebook.com/profile.php?id=61587323746589" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">PREV-COR TPM</a></div>
           <div className="flex items-center gap-3"><span className="text-2xl">📍</span> <span className="font-medium">{txt.address}:</span> <span>{translateAddress(contactInfo.adresa)}</span></div>
           <div className="flex items-center gap-3"><span className="text-2xl">🏷️</span> <span className="font-medium">{txt.postalCode}:</span> <span>{contactInfo.codPostal}</span></div>
           <div className="flex items-center gap-3"><span className="text-2xl">⏰</span> <span className="font-medium">{txt.schedule}:</span> <span>{translateSchedule(contactInfo.program)}</span></div>

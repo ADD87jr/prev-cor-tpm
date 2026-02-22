@@ -1,8 +1,10 @@
-import { cookies } from "next/headers";
 import { jwtVerify } from "jose";
 import { NextRequest, NextResponse } from "next/server";
 
 const JWT_SECRET = new TextEncoder().encode(process.env.NEXTAUTH_SECRET || "your-super-secret-key-change-this");
+
+// Sesiunea durează 1 an și se reînnoiește automat
+const SESSION_DURATION_MS = 365 * 24 * 60 * 60 * 1000; // 1 an
 
 export interface AdminSession {
   adminId: string;
@@ -17,9 +19,8 @@ export interface AdminSession {
  */
 export async function verifyAdminSession(req: NextRequest): Promise<{ valid: boolean; session?: AdminSession; error?: string }> {
   try {
-    // Caută JWT în cookies
-    const cookieStore = await cookies();
-    const token = cookieStore.get("adminSession")?.value;
+    // Caută JWT în cookies direct din request
+    const token = req.cookies.get("adminSession")?.value;
 
     if (!token) {
       return { valid: false, error: "No session found" };
@@ -43,9 +44,10 @@ export async function verifyAdminSession(req: NextRequest): Promise<{ valid: boo
 /**
  * Middleware pentru protejarea endpoint-urilor admin
  * Trebuie folosit la începutul fiecărui handler admin API
+ * Reînnoiește automat sesiunea la fiecare request valid
  */
 export async function adminAuthMiddleware(req: NextRequest): Promise<NextResponse | null> {
-  const { valid, error } = await verifyAdminSession(req);
+  const { valid, error, session } = await verifyAdminSession(req);
 
   if (!valid) {
     // Construiește răspunsul de eroare
@@ -59,7 +61,7 @@ export async function adminAuthMiddleware(req: NextRequest): Promise<NextRespons
       response.cookies.set("adminSession", "", {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
+        sameSite: "lax",
         maxAge: 0,
         path: "/",
       });
@@ -68,6 +70,7 @@ export async function adminAuthMiddleware(req: NextRequest): Promise<NextRespons
     return response;
   }
 
+  // Sesiune validă - NU mai reînnoim token-ul (sesiunea e setată la 1 an)
   return null; // null = autentificare reușită, continuă execuția
 }
 

@@ -44,19 +44,10 @@ export function calculateCartSummary({
   let totalProductDiscount = 0;
   let totalCouponDiscount = 0;
   products.forEach(item => {
+    // NU aplicăm item.discount - prețul din item.price este deja cu reducerea aplicată
+    // (reducerea e deja inclusă în preț la adăugare în coș)
     let priceAfterProductDiscount = item.price;
     let productDiscount = 0;
-    // Tratează discount > 0 ca procent by default dacă discountType lipsește
-    if (typeof item.discount === 'number' && item.discount > 0) {
-      if (item.discountType === 'percent' || !item.discountType) {
-        const percent = item.discount <= 1 ? item.discount * 100 : item.discount;
-        productDiscount = item.price * (percent / 100);
-      } else {
-        productDiscount = item.discount;
-      }
-      priceAfterProductDiscount = item.price - productDiscount;
-    }
-    if (priceAfterProductDiscount < 0) priceAfterProductDiscount = 0;
 
     let couponDiscount = 0;
     let priceAfterCoupon = priceAfterProductDiscount;

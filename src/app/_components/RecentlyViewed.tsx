@@ -4,10 +4,12 @@ import { useRecentlyViewed } from "./RecentlyViewedContext";
 import { useLanguage } from "./LanguageContext";
 import Image from "next/image";
 import Link from "next/link";
+import { useState, useEffect } from "react";
 
 export default function RecentlyViewed() {
-  const { viewedProducts, clearViewed } = useRecentlyViewed();
+  const { viewedProducts, clearViewed, updateProductPrices } = useRecentlyViewed();
   const { language } = useLanguage();
+  const [hasFetchedPrices, setHasFetchedPrices] = useState(false);
   
   const txt = {
     title: language === "en" ? "Recently viewed products" : "Produse vizualizate recent",
@@ -18,6 +20,22 @@ export default function RecentlyViewed() {
     if (language === "en" && product.nameEn) return product.nameEn;
     return product.name;
   };
+
+  // Fetch updated prices when component mounts
+  useEffect(() => {
+    if (viewedProducts.length > 0 && !hasFetchedPrices) {
+      const productIds = viewedProducts.map(p => p.id);
+      fetch(`/api/products/prices?ids=${productIds.join(",")}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data && typeof data === "object") {
+            updateProductPrices(data);
+          }
+        })
+        .catch(() => {})
+        .finally(() => setHasFetchedPrices(true));
+    }
+  }, [viewedProducts.length, hasFetchedPrices, updateProductPrices]);
 
   if (viewedProducts.length === 0) return null;
 

@@ -298,9 +298,19 @@ export async function generateOrderConfirmationPdfBuffer(order: any, language?: 
     ? order.products 
     : (Array.isArray(order.items) ? order.items : []);
   
-  // Table headers
-  const headers = [txt.nr, txt.product, txt.qty, txt.price, txt.prodDiscount, txt.couponDiscount, txt.final, txt.subtotal, txt.term];
-  const colWidths = [30, 180, 40, 60, 70, 60, 60, 70, 60];
+  // Verifică dacă există cupoane aplicate
+  const hasCoupon = produse.some((item: any) => 
+    item.appliedCoupon || (typeof item.couponDiscount === 'number' && item.couponDiscount > 0)
+  );
+  
+  // Table headers - fără coloane de reducere (prețul include deja reducerea)
+  // Adăugăm coloana cupon doar dacă există cupoane
+  const headers = hasCoupon 
+    ? [txt.nr, txt.product, txt.qty, txt.price, txt.couponDiscount, txt.final, txt.subtotal, txt.term]
+    : [txt.nr, txt.product, txt.qty, txt.price, txt.subtotal, txt.term];
+  const colWidths = hasCoupon 
+    ? [22, 300, 35, 55, 55, 55, 65, 55]
+    : [22, 350, 40, 65, 80, 70];
   
   // Draw table header background
   page.drawRectangle({
@@ -333,19 +343,11 @@ export async function generateOrderConfirmationPdfBuffer(order: any, language?: 
     const price = Number(item.price) || 0;
     const qty = Number(item.quantity || item.qty) || 1;
     
+    // NU aplicăm item.discount sau item.productDiscount suplimentar - prețul deja include reducerea
+    // Reducerea de produs e deja reflectată în item.price la adăugarea în coș
     let productDiscount = 0;
-    if (typeof item.productDiscount === 'number') {
-      productDiscount = item.productDiscount;
-    } else if (typeof item.discount === 'number' && item.discount > 0) {
-      if (item.discountType === 'percent' || !item.discountType) {
-        const percent = item.discount <= 1 ? item.discount * 100 : item.discount;
-        productDiscount = price * (percent / 100);
-      } else {
-        productDiscount = item.discount;
-      }
-    }
     
-    const priceAfterProductDiscount = Math.max(0, price - productDiscount);
+    const priceAfterProductDiscount = price;
     
     let couponDiscount = 0;
     if (typeof item.couponDiscount === 'number') {
@@ -381,51 +383,79 @@ export async function generateOrderConfirmationPdfBuffer(order: any, language?: 
   // Draw product rows
   for (let idx = 0; idx < summaryProducts.length && y > 120; idx++) {
     const item = summaryProducts[idx];
-    const productName = (lang === 'en' && item.nameEn ? item.nameEn : (item.name || item.title || '-')).substring(0, 35);
+    const productName = (lang === 'en' && item.nameEn ? item.nameEn : (item.name || item.title || '-'));
+    
+    // Linia a doua: cod variantă + info (ca în email)
+    const variantLine = item.variantCode 
+      ? `(${item.variantCode}${item.variantInfo ? ` - ${item.variantInfo}` : ''})` 
+      : '';
+    
     const deliveryTerm = item.deliveryTime || item.deliveryTerm || '-';
     
     tableX = margin + 5;
+    let colIdx = 0;
     
     // Nr
     page.drawText(String(idx + 1), { x: tableX, y, size: 8, font: helvetica });
-    tableX += colWidths[0];
+    tableX += colWidths[colIdx++];
     
-    // Product name
+    // Product name - linia 1
     page.drawText(productName, { x: tableX, y, size: 8, font: helvetica });
-    tableX += colWidths[1];
+    // Variant info - linia 2 (mai mic)
+    if (variantLine) {
+      page.drawText(variantLine, { x: tableX, y: y - 10, size: 7, font: helvetica });
+    }
+    tableX += colWidths[colIdx++];
     
     // Qty
     page.drawText(String(item.qty), { x: tableX, y, size: 8, font: helvetica });
-    tableX += colWidths[2];
+    tableX += colWidths[colIdx++];
     
-    // Price
-    page.drawText(`${item.price.toFixed(2)}`, { x: tableX, y, size: 8, font: helvetica });
-    tableX += colWidths[3];
+    // Price - afișează discount de produs dacă există (listPrice > price)
+    const hasProductDiscount = item.listPrice && item.listPrice > item.price;
+    if (hasProductDiscount) {
+      // Preț vechi tăiat (gri, mai mic)
+      const oldPriceText = `${item.listPrice.toFixed(2)}`;
+      page.drawText(oldPriceText, { x: tableX, y: y + 6, size: 7, font: helvetica, color: rgb(0.6, 0.6, 0.6) });
+      // Linie orizontală peste prețul vechi (simuleaza line-through)
+      const textWidth = helvetica.widthOfTextAtSize(oldPriceText, 7);
+      page.drawLine({
+        start: { x: tableX, y: y + 8 },
+        end: { x: tableX + textWidth, y: y + 8 },
+        thickness: 0.5,
+        color: rgb(0.6, 0.6, 0.6),
+      });
+      // Preț actual (bold)
+      page.drawText(`${item.price.toFixed(2)}`, { x: tableX, y, size: 8, font: helveticaBold });
+      // Procent discount dacă există
+      if (item.discount && item.discount > 0) {
+        page.drawText(`(-${item.discount}%)`, { x: tableX, y: y - 8, size: 6, font: helvetica, color: rgb(0.09, 0.64, 0.26) });
+      }
+    } else {
+      page.drawText(`${item.price.toFixed(2)}`, { x: tableX, y, size: 8, font: helvetica });
+    }
+    tableX += colWidths[colIdx++];
     
-    // Product discount
-    page.drawText(item.productDiscount > 0 ? `-${item.productDiscount.toFixed(2)}` : '-', { 
-      x: tableX, y, size: 8, font: helvetica 
-    });
-    tableX += colWidths[4];
-    
-    // Coupon discount
-    page.drawText(item.couponDiscount > 0 ? `-${item.couponDiscount.toFixed(2)}` : '-', { 
-      x: tableX, y, size: 8, font: helvetica 
-    });
-    tableX += colWidths[5];
-    
-    // Final price
-    page.drawText(`${item.priceAfterCoupon.toFixed(2)}`, { x: tableX, y, size: 8, font: helvetica });
-    tableX += colWidths[6];
+    // Coupon discount - doar dacă există cupoane
+    if (hasCoupon) {
+      page.drawText(item.couponDiscount > 0 ? `-${item.couponDiscount.toFixed(2)}` : '-', { 
+        x: tableX, y, size: 8, font: helvetica 
+      });
+      tableX += colWidths[colIdx++];
+      
+      // Final price (după cupon)
+      page.drawText(`${item.priceAfterCoupon.toFixed(2)}`, { x: tableX, y, size: 8, font: helvetica });
+      tableX += colWidths[colIdx++];
+    }
     
     // Subtotal
     page.drawText(`${item.itemSubtotal.toFixed(2)}`, { x: tableX, y, size: 8, font: helvetica });
-    tableX += colWidths[7];
+    tableX += colWidths[colIdx++];
     
     // Delivery term
     page.drawText(deliveryTerm.substring(0, 10), { x: tableX, y, size: 8, font: helvetica });
     
-    y -= 14;
+    y -= 24; // Spațiu pentru 2 linii: nume produs + variantă
   }
   
   y -= 10;
@@ -442,35 +472,27 @@ export async function generateOrderConfirmationPdfBuffer(order: any, language?: 
   });
   y -= 14;
   
-  // Product discount
-  page.drawText(`${txt.totalProductDiscount}: -${totalProductDiscount.toFixed(2)} ${txt.currencyUnit}`, {
-    x: summaryX,
-    y: y,
-    size: 10,
-    font: helvetica,
-    color: rgb(1, 0.5, 0),
-  });
-  y -= 14;
-  
-  // Coupon discount
-  page.drawText(`${txt.totalCouponDiscount}: -${totalCouponDiscount.toFixed(2)} ${txt.currencyUnit}`, {
-    x: summaryX,
-    y: y,
-    size: 10,
-    font: helvetica,
-    color: rgb(0, 0, 1),
-  });
-  y -= 14;
-  
-  // Subtotal after discounts
-  page.drawText(`${txt.subtotalAfterDiscounts}: ${subtotalDupaReduceri.toFixed(2)} ${txt.currencyUnit}`, {
-    x: summaryX,
-    y: y,
-    size: 10,
-    font: helveticaBold,
-    color: rgb(0, 0.5, 0),
-  });
-  y -= 14;
+  // Coupon discount - doar dacă există
+  if (totalCouponDiscount > 0) {
+    page.drawText(`${txt.totalCouponDiscount}: -${totalCouponDiscount.toFixed(2)} ${txt.currencyUnit}`, {
+      x: summaryX,
+      y: y,
+      size: 10,
+      font: helvetica,
+      color: rgb(0, 0, 1),
+    });
+    y -= 14;
+    
+    // Subtotal after discounts - doar dacă există reduceri
+    page.drawText(`${txt.subtotalAfterDiscounts}: ${subtotalDupaReduceri.toFixed(2)} ${txt.currencyUnit}`, {
+      x: summaryX,
+      y: y,
+      size: 10,
+      font: helveticaBold,
+      color: rgb(0, 0.5, 0),
+    });
+    y -= 14;
+  }
   
   // Courier cost
   const courierCost = typeof order.courierCost === 'number' ? order.courierCost : 0;
