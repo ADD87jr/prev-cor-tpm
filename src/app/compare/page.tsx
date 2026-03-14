@@ -26,6 +26,7 @@ export default function ComparePage() {
     stock: language === "en" ? "Stock" : "Stoc",
     inStock: language === "en" ? "In stock" : "În stoc",
     outOfStock: language === "en" ? "Out of stock" : "Stoc epuizat",
+    onDemand: language === "en" ? "On order" : "Pe comandă",
     actions: language === "en" ? "Actions" : "Acțiuni",
     viewDetails: language === "en" ? "View details" : "Vezi detalii",
     canAddMore: language === "en" ? "You can add" : "Poți adăuga încă",
@@ -77,24 +78,32 @@ export default function ComparePage() {
     <main className="container mx-auto py-10 px-4 max-w-7xl">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold text-blue-700">{txt.title}</h1>
-        <button
-          onClick={clearCompare}
-          className="text-red-600 hover:text-red-700 font-semibold flex items-center gap-2"
-        >
-          <span>🗑️</span> {txt.clearAll}
-        </button>
+        <div className="flex gap-4">
+          <Link 
+            href="/magazin" 
+            className="text-blue-600 hover:text-blue-700 font-semibold flex items-center gap-2"
+          >
+            <span>←</span> {language === "en" ? "Back to shop" : "Înapoi la magazin"}
+          </Link>
+          <button
+            onClick={clearCompare}
+            className="text-red-600 hover:text-red-700 font-semibold flex items-center gap-2"
+          >
+            <span>🗑️</span> {txt.clearAll}
+          </button>
+        </div>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse bg-white shadow-lg rounded-xl overflow-hidden">
-          <thead>
-            <tr className="bg-gray-50">
-              <th className="p-4 text-left text-gray-600 font-semibold w-48">{txt.feature}</th>
+      <div className="overflow-x-auto max-h-[75vh] overflow-y-auto border rounded-xl shadow-lg">
+        <table className="w-full border-collapse bg-white">
+          <thead className="sticky top-0 z-10">
+            <tr className="bg-gray-100">
+              <th className="p-4 text-left text-gray-600 font-semibold w-48 bg-gray-100">{txt.feature}</th>
               {compareItems.map(item => (
-                <th key={item.id} className="p-4 text-center min-w-[250px]">
+                <th key={item.id} className="p-4 text-center min-w-[250px] bg-gray-100 relative">
                   <button
                     onClick={() => removeFromCompare(item.id)}
-                    className="absolute top-2 right-2 text-gray-400 hover:text-red-500 transition"
+                    className="absolute top-2 right-2 w-8 h-8 bg-red-100 hover:bg-red-200 text-red-600 rounded-full transition flex items-center justify-center text-lg font-bold"
                     title={txt.removeFromCompare}
                   >
                     ✕
@@ -183,6 +192,8 @@ export default function ComparePage() {
                   {item.stock !== undefined ? (
                     item.stock > 0 ? (
                       <span className="text-green-600 font-semibold">✓ {txt.inStock} ({item.stock})</span>
+                    ) : item.deliveryTime || item.onDemand ? (
+                      <span className="text-orange-500 font-semibold">📦 {txt.onDemand}</span>
                     ) : (
                       <span className="text-red-500">{txt.outOfStock}</span>
                     )
@@ -204,10 +215,10 @@ export default function ComparePage() {
             ))}
 
             {/* Action Buttons */}
-            <tr className="bg-blue-50">
-              <td className="p-4 font-semibold text-gray-700">{txt.actions}</td>
+            <tr className="bg-blue-50 sticky bottom-0">
+              <td className="p-4 font-semibold text-gray-700 bg-blue-50">{txt.actions}</td>
               {compareItems.map(item => (
-                <td key={item.id} className="p-4 text-center">
+                <td key={item.id} className="p-4 text-center bg-blue-50">
                   <Link
                     href={`/shop/${item.id}`}
                     className="inline-block bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition"

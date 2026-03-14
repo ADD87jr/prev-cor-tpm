@@ -1,0 +1,23 @@
+﻿npx : Environment variables loaded from .env
+At line:1 char:365
++ ... J7cJvmaYjz27_6Bw"; npx prisma db push --accept-data-loss 2>&1 | Out-F ...
++                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Environment variables loaded from 
+    .env:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Prisma schema loaded from prisma\schema.prisma
+Error: Prisma schema validation - (get-config wasm)
+Error code: P1012
+error: Error validating datasource `db`: the URL must start with the protocol 
+`file:`.
+  -->  prisma\schema.prisma:8
+   | 
+ 7 |   provider = "sqlite"
+ 8 |   url      = env("DATABASE_URL")
+   | 
+
+Validation Error Count: 1
+[Context: getConfig]
+
+Prisma CLI Version : 6.19.2

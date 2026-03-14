@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ valid: false, message: 'Cod cupon invalid' });
     }
     
-    const coupon = validateCoupon(code.trim().toUpperCase());
+    const coupon = await validateCoupon(code.trim().toUpperCase());
     
     if (coupon) {
       return NextResponse.json({

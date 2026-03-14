@@ -1,0 +1,68 @@
+[
+  {
+    "id": 1,
+    "productId": 6,
+    "variantId": null,
+    "oldPrice": 850,
+    "newPrice": 918,
+    "oldListPrice": 1020,
+    "newListPrice": 1020,
+    "changedBy": "admin",
+    "createdAt": "2026-03-01T14:50:07.471Z"
+  },
+  {
+    "id": 2,
+    "productId": 1,
+    "variantId": null,
+    "oldPrice": 152.1,
+    "newPrice": 81,
+    "oldListPrice": 169,
+    "newListPrice": 90,
+    "changedBy": "admin",
+    "createdAt": "2026-03-02T17:02:51.082Z"
+  },
+  {
+    "id": 3,
+    "productId": 1,
+    "variantId": 1,
+    "oldPrice": 152.1,
+    "newPrice": 81,
+    "oldListPrice": 169,
+    "newListPrice": 90,
+    "changedBy": "admin",
+    "createdAt": "2026-03-02T17:38:36.970Z"
+  },
+  {
+    "id": 4,
+    "productId": 1,
+    "variantId": 2,
+    "oldPrice": 152.1,
+    "newPrice": 100,
+    "oldListPrice": 169,
+    "newListPrice": 111,
+    "changedBy": "admin",
+    "createdAt": "2026-03-02T17:41:01.202Z"
+  },
+  {
+    "id": 5,
+    "productId": 1,
+    "variantId": 4,
+    "oldPrice": 152.1,
+    "newPrice": 100,
+    "oldListPrice": 169,
+    "newListPrice": 111,
+    "changedBy": "admin",
+    "createdAt": "2026-03-02T17:44:20.972Z"
+  },
+  {
+    "id": 6,
+    "productId": 6,
+    "variantId": null,
+    "oldPrice": 1000,
+    "newPrice": 540,
+    "oldListPrice": 1020,
+    "newListPrice": 600,
+    "changedBy": "admin",
+    "createdAt": "2026-03-02T18:55:31.308Z"
+  }
+]

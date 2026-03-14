@@ -1,4 +1,5 @@
 // Script pentru a crea tabelele lipsă în Turso
+require('dotenv').config({path: '.env.local'});
 const { createClient } = require('@libsql/client');
 
 async function syncTables() {

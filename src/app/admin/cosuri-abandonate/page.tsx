@@ -18,6 +18,7 @@ export default function AbandonedCartsPage() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [message, setMessage] = useState("");
+  const [deleting, setDeleting] = useState<number | null>(null);
 
   useEffect(() => {
     fetchCarts();
@@ -34,6 +35,33 @@ export default function AbandonedCartsPage() {
       setCarts([]);
     }
     setLoading(false);
+  };
+
+  const deleteCart = async (id: number) => {
+    if (!confirm("Sigur vrei să ștergi acest coș abandonat?")) return;
+    setDeleting(id);
+    try {
+      await fetch(`/api/abandoned-cart?id=${id}`, { method: "DELETE" });
+      setCarts(carts.filter(c => c.id !== id));
+      setMessage("Coș șters cu succes");
+    } catch (e) {
+      setMessage("Eroare la ștergere");
+    }
+    setDeleting(null);
+  };
+
+  const deleteAllCarts = async () => {
+    if (!confirm(`Sigur vrei să ștergi TOATE cele ${carts.length} coșuri abandonate?`)) return;
+    setSending(true);
+    try {
+      const res = await fetch("/api/abandoned-cart?deleteAll=true", { method: "DELETE" });
+      const data = await res.json();
+      setMessage(`${data.deleted || 0} coșuri șterse`);
+      setCarts([]);
+    } catch (e) {
+      setMessage("Eroare la ștergere");
+    }
+    setSending(false);
   };
 
   const sendReminders = async () => {
@@ -83,6 +111,15 @@ export default function AbandonedCartsPage() {
             >
               {sending ? "Se trimit..." : "📧 Trimite reminder-uri"}
             </button>
+            {carts.length > 0 && (
+              <button
+                onClick={deleteAllCarts}
+                disabled={sending}
+                className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 disabled:bg-gray-400"
+              >
+                🗑️ Șterge toate ({carts.length})
+              </button>
+            )}
           </div>
         </div>
 
@@ -107,6 +144,7 @@ export default function AbandonedCartsPage() {
                   <th className="px-4 py-3">Total</th>
                   <th className="px-4 py-3">Abandonat</th>
                   <th className="px-4 py-3">Email trimis</th>
+                  <th className="px-4 py-3">Acțiuni</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -152,6 +190,15 @@ export default function AbandonedCartsPage() {
                           ⏳ În așteptare
                         </span>
                       )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <button
+                        onClick={() => deleteCart(cart.id)}
+                        disabled={deleting === cart.id}
+                        className="text-red-600 hover:text-red-800 text-sm font-medium disabled:opacity-50"
+                      >
+                        {deleting === cart.id ? "..." : "🗑️ Șterge"}
+                      </button>
                     </td>
                   </tr>
                 ))}

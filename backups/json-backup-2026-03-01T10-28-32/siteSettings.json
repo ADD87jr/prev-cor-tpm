@@ -1,0 +1,20 @@
+[
+  {
+    "id": 1,
+    "key": "last_backup_date",
+    "value": "2026-03-01T08:44:04.130Z",
+    "updatedAt": "2026-03-01T08:44:04.148Z"
+  },
+  {
+    "id": 2,
+    "key": "site_pages",
+    "value": "{\"acasa\":{\"titlu\":\"Bine ați venit la PREV-COR TPM\",\"subtitlu\":\"Solutii Inteligente de Automatizare Industriala\",\"descriere\":\"Oferim servicii profesionale de proiectare, instalare și mentenanță pentru sisteme electrice și automatizări.\"},\"despre\":{\"titlu\":\"Despre Noi\",\"descriere\":\"PREV-COR TPM este o companie specializată în domeniul instalațiilor electrice și automatizărilor industriale.\",\"experienta\":\"15+ ani experiență\",\"proiecte\":\"500+ proiecte finalizate\",\"clienti\":\"200+ clienți mulțumiți\"},\"servicii\":{\"titlu\":\"Serviciile Noastre\",\"descriere\":\"Oferim o gamă completă de servicii în domeniul electric și automatizări.\",\"lista\":[{\"nume\":\"Instalații electrice\",\"descriere\":\"Proiectare și execuție instalații electrice industriale și rezidențiale\"},{\"nume\":\"Automatizări industriale\",\"descriere\":\"Sisteme de automatizare pentru procese industriale\"},{\"nume\":\"Mentenanță\",\"descriere\":\"Servicii de mentenanță preventivă și corectivă\"},{\"nume\":\"Tablouri electrice\",\"descriere\":\"Proiectare și asamblare tablouri electrice\"}]},\"magazin\":{\"titlu\":\"Magazin Online\",\"descriere\":\"Echipamente electrice și componente de calitate pentru proiectele dumneavoastră.\",\"banner\":\"Livrare rapidă în toată țara!\"},\"contact\":{\"titlu\":\"Informații de Contact\",\"telefon\":\"0732 935 353\",\"email\":\"office@prevcortpm.ro\",\"adresa\":\"Strada Principala, nr.70, Stroesti, Mehedinti, România\",\"codPostal\":\"227208\",\"program\":\"Luni - Vineri: 08:00 - 17:00\"},\"cos\":{\"tva\":21,\"moneda\":\"RON\",\"livrareGratuita\":500,\"textLivrare\":\"Livrare gratuită pentru comenzi peste 500 RON\",\"termenLivrare\":\"2-5 zile lucrătoare\",\"costCurierStandard\":25,\"costCurierExpress\":40,\"costPerKg\":1}}",
+    "updatedAt": "2026-03-01T09:52:02.829Z"
+  },
+  {
+    "id": 3,
+    "key": "company_data",
+    "value": "{\"name\":\"S.C. PREV-COR TPM S.R.L.\",\"shortName\":\"PREV-COR TPM\",\"cui\":\"RO43434739\",\"regCom\":\"J25/582/2020\",\"phone\":\"0732 935 623\",\"phoneClean\":\"40732935623\",\"email\":\"office@prevcortpm.ro\",\"whatsapp\":\"https://wa.me/40732935623\",\"address\":{\"street\":\"Principala\",\"number\":\"70\",\"city\":\"Stroesti\",\"county\":\"Mehedinti\",\"postalCode\":\"227208\",\"country\":\"Romania\"},\"iban\":\"RO23BRDE360SV67547173600\",\"bank\":\"BANCA ROMANA DE DEZVOLTARE\",\"bankEn\":\"ROMANIAN DEVELOPMENT BANK (BRD)\"}",
+    "updatedAt": "2026-03-01T09:56:36.089Z"
+  }
+]

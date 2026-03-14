@@ -13,9 +13,14 @@ export default function Footer() {
     rights: language === "en" ? "All rights reserved." : "Toate drepturile rezervate.",
     terms: language === "en" ? "Terms and conditions" : "Termeni și condiții",
     privacy: language === "en" ? "Privacy policy" : "Politica de confidențialitate",
+    cookies: language === "en" ? "Cookie policy" : "Politica de cookies",
+    returnPolicy: language === "en" ? "Return policy" : "Politica de retur",
+    faq: "FAQ",
     contact: language === "en" ? "Contact" : "Contact",
     trackOrder: language === "en" ? "Track order" : "Urmărește comanda",
     blog: language === "en" ? "Blog" : "Blog",
+    companyData: language === "en" ? "Company data" : "Date firmă",
+    anpcInfo: language === "en" ? "Consumer protection" : "Protecția consumatorilor",
   };
 
   return (
@@ -45,13 +50,35 @@ export default function Footer() {
               </div>
             </div>
           </div>
-          <div className="text-sm">&copy; {new Date().getFullYear()} PREV-COR TPM. {txt.rights}</div>
-          <div className="flex gap-4 text-xs">
+          <div className="text-sm text-center">
+            <div>&copy; {new Date().getFullYear()} PREV-COR TPM</div>
+            <div className="text-xs text-gray-400">{txt.rights}</div>
+          </div>
+          <div className="flex gap-4 text-xs flex-wrap justify-center">
             <a href="/terms" className="hover:underline">{txt.terms}</a>
             <a href="/privacy" className="hover:underline">{txt.privacy}</a>
+            <a href="/cookie-policy" className="hover:underline">{txt.cookies}</a>
+            <a href="/politica-retur" className="hover:underline">{txt.returnPolicy}</a>
+            <a href="/faq" className="hover:underline">{txt.faq}</a>
             <a href="/blog" className="hover:underline">{txt.blog}</a>
             <a href="/track-order" className="hover:underline">{txt.trackOrder}</a>
             <a href="/contact" className="hover:underline">{txt.contact}</a>
+          </div>
+        </div>
+
+        {/* Date companie + ANPC */}
+        <div className="mt-6 pt-6 border-t border-gray-700 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-gray-400">
+          <div className="text-center md:text-left">
+            <div className="font-semibold text-gray-300">{txt.companyData}:</div>
+            <div>S.C. PREV-COR TPM S.R.L. | CUI: RO43434739 | J25/582/2020</div>
+            <div>Str. Principala nr. 70, Stroesti, Mehedinti, 227208, Romania</div>
+            <div>Tel: 0732 935 623 | Email: office@prevcortpm.ro</div>
+          </div>
+          <div className="text-center md:text-right flex flex-col gap-1">
+            <div className="font-semibold text-gray-300">{txt.anpcInfo}:</div>
+            <a href="https://anpc.ro/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">ANPC - anpc.ro</a>
+            <a href="https://ec.europa.eu/consumers/odr" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">SOL - Soluționarea Online a Litigiilor</a>
+            <a href="https://anpc.ro/ce-este-sal/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">SAL - Soluționarea Alternativă a Litigiilor</a>
           </div>
         </div>
       </div>

@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import nodemailer from "nodemailer";
+import { sendEmail } from "@/app/utils/email";
 import { generateOrderConfirmationPdfBuffer } from "@/app/utils/orderConfirmationPdfLib";
 import { calculateCartSummary, CartSummaryProduct } from "@/app/utils/cartSummary";
+import { getCartSettings } from "@/lib/getTvaPercent";
 
 export async function POST(req: Request) {
     const data = await req.json();
@@ -9,6 +10,9 @@ export async function POST(req: Request) {
     console.log('[DEBUG] paymentMethod primit:', data.paymentMethod);
     console.log('[DEBUG] deliveryType primit:', data.deliveryType);
     const { name, email, address, phone, items, total, totals, ...rest } = data;
+
+    // Citește setările de coș din admin
+    const cartSettings = await getCartSettings();
 
     // Nu trimite email dacă nu există produse
     if (!items || !Array.isArray(items) || items.length === 0) {
@@ -28,8 +32,16 @@ export async function POST(req: Request) {
       appliedCoupon: item.appliedCoupon || null,
       deliveryTime: item.deliveryTime || item.deliveryTerm || '-'
     }));
-    // Obține stacking logic pentru fiecare produs
-    const summary = calculateCartSummary({ products: productsRaw });
+    // Obține stacking logic pentru fiecare produs cu setările din admin
+    const summary = calculateCartSummary({
+      products: productsRaw,
+      deliveryType: data.deliveryType,
+      TVA_PERCENT: cartSettings.tva,
+      livrareGratuita: cartSettings.livrareGratuita,
+      costCurierStandard: cartSettings.costCurierStandard,
+      costCurierExpress: cartSettings.costCurierExpress,
+      costPerKg: cartSettings.costPerKg,
+    });
     // Reconstruiește array-ul de produse - NU aplicăm discount suplimentar, prețul include deja reducerea
     const products = productsRaw.map((item) => {
       // Prețul deja include reducerea de produs
@@ -105,25 +117,14 @@ export async function POST(req: Request) {
       </div>
     `;
     // Trimitere email cu emailHtml
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST || "smtp.example.com",
-      port: Number(process.env.SMTP_PORT) || 587,
-      secure: false,
-      auth: {
-        user: process.env.SMTP_USER || "user@example.com",
-        pass: process.env.SMTP_PASS || "password"
-      }
-    });
     // Generează un ID unic bazat pe timestamp pentru subiect (dacă nu avem orderId)
     const orderRef = data.orderId || Date.now();
-    const mailOptions = {
-      from: `Magazin PREV-COR TPM <${process.env.SMTP_USER || "user@example.com"}>`,
-      to: email,
-      subject: `Confirmare comandă #${orderRef} - PREV-COR TPM`,
-      html: emailHtml
-    };
     try {
-      await transporter.sendMail(mailOptions);
+      await sendEmail({
+        to: email,
+        subject: `Confirmare comandă #${orderRef} - PREV-COR TPM`,
+        html: emailHtml
+      });
       return NextResponse.json({ success: true });
     } catch (err) {
       console.error('[EMAIL] Eroare la trimitere:', err);

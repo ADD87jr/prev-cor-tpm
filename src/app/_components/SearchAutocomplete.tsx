@@ -81,11 +81,15 @@ export default function SearchAutocomplete() {
   return (
     <div ref={wrapperRef} className="relative w-full max-w-md">
       <div className="relative">
+        {/* Input ascuns care absoarbe autofill-ul browserului */}
+        <input type="text" name="prevent-autofill" autoComplete="email" className="hidden" tabIndex={-1} aria-hidden="true" />
         <input
           ref={inputRef}
-          type="search"
+          type="text"
           name="product-search"
           autoComplete="off"
+          data-form-type="other"
+          data-lpignore="true"
           placeholder={language === "en" ? "Search products..." : "Caută produse..."}
           value={query}
           onChange={(e) => setQuery(e.target.value)}

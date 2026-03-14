@@ -113,5 +113,50 @@ export function useAnalytics() {
     }
   };
 
-  return { trackEvent, trackPageView, trackPurchase, trackAddToCart };
+  const trackViewItem = (productId: number, productName: string, price: number, category?: string) => {
+    if (typeof window !== "undefined" && (window as any).gtag) {
+      (window as any).gtag("event", "view_item", {
+        currency: "RON",
+        value: price,
+        items: [{
+          item_id: productId,
+          item_name: productName,
+          price: price,
+          item_category: category,
+        }],
+      });
+    }
+  };
+
+  const trackBeginCheckout = (value: number, items: any[]) => {
+    if (typeof window !== "undefined" && (window as any).gtag) {
+      (window as any).gtag("event", "begin_checkout", {
+        currency: "RON",
+        value: value,
+        items: items.map((item, index) => ({
+          item_id: item.id,
+          item_name: item.name,
+          price: item.price,
+          quantity: item.quantity || 1,
+          index: index,
+        })),
+      });
+    }
+  };
+
+  const trackViewItemList = (listName: string, items: any[]) => {
+    if (typeof window !== "undefined" && (window as any).gtag) {
+      (window as any).gtag("event", "view_item_list", {
+        item_list_name: listName,
+        items: items.slice(0, 20).map((item, index) => ({
+          item_id: item.id,
+          item_name: item.name,
+          price: item.price,
+          index: index,
+        })),
+      });
+    }
+  };
+
+  return { trackEvent, trackPageView, trackPurchase, trackAddToCart, trackViewItem, trackBeginCheckout, trackViewItemList };
 }

@@ -4,6 +4,83 @@ import { sendEmail } from "@/app/utils/email";
 import { logAdminAction } from "@/app/utils/adminLog";
 import { adminAuthMiddleware } from "@/lib/auth-middleware";
 import { getClientIp } from "@/lib/rate-limit";
+import { createClient } from "@libsql/client";
+
+// Funcție pentru re-indexare automată ID-uri după ștergere
+async function reindexProductIds() {
+  const db = createClient({
+    url: process.env.TURSO_DATABASE_URL!,
+    authToken: process.env.TURSO_AUTH_TOKEN!,
+  });
+
+  try {
+    // Ia toate produsele ordonate după ID
+    const products = await db.execute('SELECT id FROM Product ORDER BY id ASC');
+    if (products.rows.length === 0) return;
+
+    // Creează mapping oldId -> newId
+    const mapping: Record<number, number> = {};
+    products.rows.forEach((p: any, index: number) => {
+      const oldId = p.id as number;
+      const newId = index + 1;
+      if (oldId !== newId) {
+        mapping[oldId] = newId;
+      }
+    });
+
+    if (Object.keys(mapping).length === 0) return; // Deja consecutive
+
+    // Dezactivează foreign keys
+    await db.execute('PRAGMA foreign_keys = OFF');
+
+    // Creează tabel temporar
+    await db.execute('DROP TABLE IF EXISTS _product_mapping');
+    await db.execute('CREATE TABLE _product_mapping (old_id INTEGER, new_id INTEGER)');
+
+    for (const [oldId, newId] of Object.entries(mapping)) {
+      await db.execute({
+        sql: 'INSERT INTO _product_mapping (old_id, new_id) VALUES (?, ?)',
+        args: [parseInt(oldId), newId]
+      });
+    }
+
+    // Actualizează SupplierProduct
+    await db.execute(`
+      UPDATE SupplierProduct 
+      SET productId = (SELECT new_id FROM _product_mapping WHERE old_id = SupplierProduct.productId)
+      WHERE productId IN (SELECT old_id FROM _product_mapping)
+    `);
+
+    // Actualizează Product IDs (faza 1 - negativ)
+    for (const [oldId, newId] of Object.entries(mapping)) {
+      await db.execute({
+        sql: 'UPDATE Product SET id = ? WHERE id = ?',
+        args: [-newId, parseInt(oldId)]
+      });
+    }
+
+    // Faza 2 - din negativ în pozitiv
+    for (const newId of Object.values(mapping)) {
+      await db.execute({
+        sql: 'UPDATE Product SET id = ? WHERE id = ?',
+        args: [newId, -newId]
+      });
+    }
+
+    // Resetează autoincrement
+    const maxId = products.rows.length;
+    await db.execute(`UPDATE sqlite_sequence SET seq = ${maxId} WHERE name = 'Product'`);
+
+    // Curăță
+    await db.execute('DROP TABLE _product_mapping');
+    await db.execute('PRAGMA foreign_keys = ON');
+
+    console.log(`[REINDEX] ID-uri actualizate: 1-${maxId}`);
+  } catch (error) {
+    console.error('[REINDEX] Error:', error);
+    await db.execute('PRAGMA foreign_keys = ON');
+  }
+}
 
 export async function GET(req: NextRequest) {
   // Protejare autentificare - NOTE: Might consider making this public if needed elsewhere
@@ -14,10 +91,12 @@ export async function GET(req: NextRequest) {
     const products = await prisma.product.findMany();
     // Adaugă listPrice la fiecare produs (fallback la price dacă nu există)
     // Include explicit toate câmpurile de traducere
+    // Păstrează moneda originală (EUR sau RON)
     const productsWithListPrice = products.map((p: any) => ({
       ...p,
       productCode: p.sku || null, // Map sku to productCode for frontend compatibility
       listPrice: typeof p.listPrice === 'number' ? p.listPrice : p.price,
+      currency: p.currency || "RON",
       nameEn: p.nameEn || null,
       descriptionEn: p.descriptionEn || null,
       specsEn: p.specsEn || null,
@@ -44,6 +123,7 @@ export async function POST(req: NextRequest) {
     price: Number(data.price),
     listPrice: data.listPrice !== undefined ? Number(data.listPrice) : undefined, // <-- adăugat
     purchasePrice: data.purchasePrice !== undefined ? Number(data.purchasePrice) : undefined,
+    currency: typeof data.currency === 'string' ? data.currency : 'RON',
     manufacturer: typeof data.manufacturer === 'string' ? data.manufacturer : undefined,
     description: typeof data.description === 'string' ? data.description : '',
     descriptionEn: typeof data.descriptionEn === 'string' ? data.descriptionEn : undefined,
@@ -65,8 +145,10 @@ export async function POST(req: NextRequest) {
     pdfUrlEn: typeof data.pdfUrlEn === 'string' ? data.pdfUrlEn : undefined,
     safetySheetUrl: typeof data.safetySheetUrl === 'string' ? data.safetySheetUrl : undefined,
     safetySheetUrlEn: typeof data.safetySheetUrlEn === 'string' ? data.safetySheetUrlEn : undefined,
+    model3dUrl: typeof data.model3dUrl === 'string' ? data.model3dUrl : undefined,
     deliveryTime: typeof data.deliveryTime === 'string' ? data.deliveryTime : undefined,
     deliveryTimeEn: typeof data.deliveryTimeEn === 'string' ? data.deliveryTimeEn : undefined,
+    images: Array.isArray(data.images) ? data.images : undefined,
   };
   console.log('Product POST payload:', productData);
   try {
@@ -124,6 +206,7 @@ export async function PUT(req: NextRequest) {
   if (data.price !== undefined) updateData.price = Number(data.price);
   if (data.listPrice !== undefined) updateData.listPrice = Number(data.listPrice);
   if (data.purchasePrice !== undefined) updateData.purchasePrice = Number(data.purchasePrice);
+  if (data.currency !== undefined) updateData.currency = data.currency;
   if (data.manufacturer !== undefined) updateData.manufacturer = data.manufacturer;
   if (data.description !== undefined) updateData.description = data.description;
   if (data.descriptionEn !== undefined) updateData.descriptionEn = data.descriptionEn;
@@ -143,16 +226,18 @@ export async function PUT(req: NextRequest) {
   if (typeof data.pdfUrlEn === 'string') updateData.pdfUrlEn = data.pdfUrlEn;
   if (typeof data.safetySheetUrl === 'string') updateData.safetySheetUrl = data.safetySheetUrl;
   if (typeof data.safetySheetUrlEn === 'string') updateData.safetySheetUrlEn = data.safetySheetUrlEn;
+  if (typeof data.model3dUrl === 'string') updateData.model3dUrl = data.model3dUrl;
   if (data.couponCode !== undefined) updateData.couponCode = data.couponCode;
   if (data.discount !== undefined) updateData.discount = data.discount;
   if (data.discountType !== undefined) updateData.discountType = data.discountType;
   if (typeof data.deliveryTime === 'string') updateData.deliveryTime = data.deliveryTime;
   if (typeof data.deliveryTimeEn === 'string') updateData.deliveryTimeEn = data.deliveryTimeEn;
+  if (Array.isArray(data.images)) updateData.images = data.images;
   // Notificare la reducere pentru wishlist
   let notifyWishlist = false;
+  // Istoric prețuri: logăm dacă s-a schimbat prețul
+  const oldProduct = await prisma.product.findUnique({ where: { id: Number(id) } });
   if (data.discount !== undefined && typeof data.discount === 'number' && data.discount > 0) {
-    // Caută produsul vechi
-    const oldProduct = await prisma.product.findUnique({ where: { id: Number(id) } });
     if (oldProduct && (!oldProduct.discount || oldProduct.discount < data.discount)) {
       notifyWishlist = true;
     }
@@ -164,6 +249,22 @@ export async function PUT(req: NextRequest) {
       where: { id: Number(id) },
       data: updateData,
     });
+    // Loghează modificarea de preț
+    if (oldProduct && (
+      (updateData.price !== undefined && updateData.price !== oldProduct.price) ||
+      (updateData.listPrice !== undefined && updateData.listPrice !== oldProduct.listPrice)
+    )) {
+      await prisma.priceHistory.create({
+        data: {
+          productId: Number(id),
+          oldPrice: oldProduct.price,
+          newPrice: updateData.price ?? oldProduct.price,
+          oldListPrice: oldProduct.listPrice,
+          newListPrice: updateData.listPrice ?? oldProduct.listPrice,
+          changedBy: "admin",
+        },
+      });
+    }
     // Log admin action
     await logAdminAction({
       action: 'UPDATE',
@@ -213,6 +314,14 @@ export async function DELETE(req: NextRequest) {
     // Suportă id din query string sau body JSON
     const url = new URL(req.url);
     let id = url.searchParams.get("id");
+    const skipReindex = url.searchParams.get("skipReindex") === "true";
+    
+    // Endpoint special pentru re-indexare manuală
+    if (url.searchParams.get("action") === "reindex") {
+      await reindexProductIds();
+      return NextResponse.json({ success: true, message: "Re-indexare completă" });
+    }
+    
     if (!id) {
       const body = await req.json();
       id = body.id;
@@ -226,6 +335,12 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "Produsul nu există!" }, { status: 404 });
     }
     await prisma.product.delete({ where: { id: numericId } });
+    
+    // Re-indexare automată ID-uri după ștergere (doar dacă nu e bulk)
+    if (!skipReindex) {
+      await reindexProductIds();
+    }
+    
     // Log admin action
     await logAdminAction({
       action: 'DELETE',

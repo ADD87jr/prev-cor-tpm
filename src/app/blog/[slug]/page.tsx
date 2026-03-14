@@ -1,68 +1,46 @@
-"use client";
-
-import { useState, useEffect, use } from "react";
+import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import { prisma } from "@/lib/prisma";
+import BlogPostShareButtons from "./BlogPostShareButtons";
 
-interface BlogPost {
-  id: number;
-  title: string;
-  slug: string;
-  content: string;
-  excerpt: string | null;
-  image: string | null;
-  category: string | null;
-  author: string | null;
-  tags: string[] | null;
-  createdAt: string;
-  updatedAt: string;
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  const post = await prisma.blogPost.findUnique({ where: { slug } });
+  if (!post) return { title: "Articol negăsit | PREV-COR TPM" };
+  return {
+    title: `${post.title} | Blog PREV-COR TPM`,
+    description: post.excerpt || post.title,
+    openGraph: {
+      title: post.title,
+      description: post.excerpt || post.title,
+      type: "article",
+      publishedTime: post.createdAt.toISOString(),
+      authors: post.author ? [post.author] : undefined,
+      images: post.image ? [{ url: post.image }] : undefined,
+    },
+  };
 }
 
-export default function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = use(params);
-  const [post, setPost] = useState<BlogPost | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [relatedPosts, setRelatedPosts] = useState<BlogPost[]>([]);
+export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
 
-  useEffect(() => {
-    // Fetch post
-    fetch(`/api/blog?slug=${slug}`)
-      .then((res) => {
-        if (!res.ok) throw new Error("Not found");
-        return res.json();
-      })
-      .then((data) => {
-        setPost(data);
-        // Fetch related posts
-        if (data.category) {
-          fetch(`/api/blog?published=true&category=${data.category}`)
-            .then((res) => res.json())
-            .then((posts) => {
-              setRelatedPosts(posts.filter((p: BlogPost) => p.id !== data.id).slice(0, 3));
-            });
-        }
-      })
-      .catch(() => setPost(null))
-      .finally(() => setLoading(false));
-  }, [slug]);
+  const post = await prisma.blogPost.findUnique({ where: { slug } });
+  if (!post || !post.published) return notFound();
 
-  if (loading) {
-    return (
-      <main className="max-w-4xl mx-auto p-6">
-        <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-24 mb-6"></div>
-          <div className="h-64 bg-gray-200 rounded-xl mb-6"></div>
-          <div className="h-10 bg-gray-200 rounded w-3/4 mb-4"></div>
-          <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
-          <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
-          <div className="h-4 bg-gray-200 rounded w-2/3"></div>
-        </div>
-      </main>
-    );
+  // Articole similare din aceeași categorie
+  let relatedPosts: any[] = [];
+  if (post.category) {
+    relatedPosts = await prisma.blogPost.findMany({
+      where: { published: true, category: post.category, id: { not: post.id } },
+      take: 3,
+      orderBy: { createdAt: "desc" },
+    });
   }
 
-  if (!post) return notFound();
+  const pageUrl = `https://prevcortpm.ro/blog/${post.slug}`;
+  const tags = (post.tags as string[]) || [];
 
   return (
     <main className="max-w-4xl mx-auto p-6">
@@ -123,9 +101,9 @@ export default function BlogPostPage({ params }: { params: Promise<{ slug: strin
       />
 
       {/* Tags */}
-      {post.tags && post.tags.length > 0 && (
+      {tags.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-8">
-          {post.tags.map((tag, index) => (
+          {tags.map((tag: string, index: number) => (
             <span
               key={index}
               className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm"
@@ -137,35 +115,7 @@ export default function BlogPostPage({ params }: { params: Promise<{ slug: strin
       )}
 
       {/* Share buttons */}
-      <div className="border-t border-b py-6 mb-8">
-        <div className="flex items-center gap-4">
-          <span className="font-semibold text-gray-700">Distribuie:</span>
-          <a
-            href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(typeof window !== "undefined" ? window.location.href : "")}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors"
-          >
-            Facebook
-          </a>
-          <a
-            href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(typeof window !== "undefined" ? window.location.href : "")}&text=${encodeURIComponent(post.title)}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="bg-sky-500 text-white px-4 py-2 rounded hover:bg-sky-600 transition-colors"
-          >
-            Twitter
-          </a>
-          <a
-            href={`https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(typeof window !== "undefined" ? window.location.href : "")}&title=${encodeURIComponent(post.title)}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="bg-blue-800 text-white px-4 py-2 rounded hover:bg-blue-900 transition-colors"
-          >
-            LinkedIn
-          </a>
-        </div>
-      </div>
+      <BlogPostShareButtons title={post.title} url={pageUrl} />
 
       {/* Related posts */}
       {relatedPosts.length > 0 && (

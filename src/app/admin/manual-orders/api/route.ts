@@ -121,8 +121,10 @@ export async function POST(req: NextRequest) {
         // Generează PDF
         const pdfBuffer = await generateOrderConfirmationPdfBuffer(createdOrder);
         const itemsArr = Array.isArray(createdOrder.items) ? createdOrder.items : [];
-        // Import calculateCartSummary pentru stacking logic
+        // Import calculateCartSummary și getCartSettings pentru stacking logic
         const { calculateCartSummary } = await import("@/app/utils/cartSummary");
+        const { getCartSettings } = await import("@/lib/getTvaPercent");
+        const cartSettings = await getCartSettings();
         // Calcule pentru totaluri și discount cu stacking logic identic cu comenzile online
         const productsForSummary = itemsArr.map((it: any) => ({
           id: it.id,
@@ -140,7 +142,15 @@ export async function POST(req: NextRequest) {
           productDiscountValue: it.productDiscount || null,
           couponDiscountValue: it.couponDiscount || null
         }));
-        const summary = calculateCartSummary({ products: productsForSummary });
+        const summary = calculateCartSummary({
+          products: productsForSummary,
+          deliveryType: createdOrder.deliveryType || undefined,
+          TVA_PERCENT: cartSettings.tva,
+          livrareGratuita: cartSettings.livrareGratuita,
+          costCurierStandard: cartSettings.costCurierStandard,
+          costCurierExpress: cartSettings.costCurierExpress,
+          costPerKg: cartSettings.costPerKg,
+        });
         
         // Verifică dacă există cupoane
         const hasCouponManual = productsForSummary.some((item: any) => item.appliedCoupon || (typeof item.couponDiscountValue === 'number' && item.couponDiscountValue > 0));

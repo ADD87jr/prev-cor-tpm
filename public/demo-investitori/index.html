@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PREV-COR TPM Demo Investitori</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <img src="assets/logo.png" alt="PREV-COR TPM Logo" class="logo">
+    <h1>Demo Investitori – Workflow complet automatizat</h1>
+    <p>Industrial Automation AI – de la cerere client la livrare fișiere finale</p>
+  </header>
+
+  <section class="form-section">
+    <h2>Trimite un proiect demo</h2>
+    <form id="demoForm">
+      <input type="text" name="client_name" placeholder="Nume Client" required>
+      <input type="email" name="client_email" placeholder="Email Client" required>
+      <input type="text" name="project_name" placeholder="Nume Proiect" required>
+      <input type="file" name="project_file">
+      <button type="submit">Trimite Demo</button>
+    </form>
+    <p id="formMessage"></p>
+  </section>
+
+  <section class="workflow">
+    <h2>Workflow Complet Vizual</h2>
+    <img src="assets/prevcortpm_workflow_complet.png" alt="Workflow Complet">
+    <p>Formular → Fișiere preliminare → Plata Stripe → Fișiere finale → Email → Istoric → Dashboard</p>
+  </section>
+
+  <section class="history">
+    <h2>Istoric Proiecte Demo</h2>
+    <img src="assets/history_demo_capture.png" alt="Istoric Proiecte Demo">
+  </section>
+
+  <section class="dashboard">
+    <h2>Dashboard Admin Demo</h2>
+    <img src="assets/dashboard_demo_capture.png" alt="Dashboard Admin Demo">
+  </section>
+
+  <section class="downloads">
+    <h2>Fișiere Demo & Mini-Ghid</h2>
+    <a href="downloads/PREV-COR_TPM_Investitori.zip" class="download-btn">Descarcă Pachet Complet Investitori</a>
+  </section>
+
+  <footer>
+    <p>PREV-COR TPM – Soluție profesională Industrial Automation AI</p>
+    <p>Contact: office@prevcortpm.ro</p>
+  </footer>
+
+  <script>
+    const form = document.getElementById('demoForm');
+    const message = document.getElementById('formMessage');
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      message.textContent = "Formular trimis cu succes! Demo procesat automat.";
+      message.style.color = "#27ae60";
+      form.reset();
+    });
+  </script>
+</body>
+</html>

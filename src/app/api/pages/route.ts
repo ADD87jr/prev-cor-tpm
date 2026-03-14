@@ -28,9 +28,12 @@ const defaultData: Record<string, any> = {
     email: COMPANY_CONFIG.email,
   },
   cos: {
-    tva: 19,
+    tva: 21,
     moneda: "RON",
     livrareGratuita: 500,
+    costCurierStandard: 25,
+    costCurierExpress: 40,
+    costPerKg: 1,
   },
 };
 

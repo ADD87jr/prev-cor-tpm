@@ -19,7 +19,14 @@ export async function GET(req: NextRequest) {
       where: { productId: Number(productId) },
       orderBy: { createdAt: "asc" },
     });
-    return NextResponse.json(variants);
+    
+    // Păstrează moneda originală (EUR sau RON)
+    const variantsWithCurrency = variants.map((v: any) => ({
+      ...v,
+      currency: v.currency || "RON",
+    }));
+    
+    return NextResponse.json(variantsWithCurrency);
   } catch (err) {
     return NextResponse.json(
       { error: "Eroare la preluarea variantelor" },
@@ -47,12 +54,26 @@ export async function POST(req: NextRequest) {
       data: {
         productId: Number(productId),
         code,
+        marime: data.marime || null,
+        distantaSesizare: data.distantaSesizare || null,
+        tipIesire: data.tipIesire || null,
+        tipContact: data.tipContact || null,
+        tensiune: data.tensiune || null,
+        curent: data.curent || null,
+        protectie: data.protectie || null,
+        material: data.material || null,
+        cablu: data.cablu || null,
         compatibil: compatibil || null,
         greutate: greutate ? Number(greutate) : null,
         stoc: Number(stoc) || 0,
         pret: pret ? Number(pret) : null,
+        listPrice: data.listPrice ? Number(data.listPrice) : null,
+        purchasePrice: data.purchasePrice ? Number(data.purchasePrice) : null,
+        currency: data.currency || "RON",
         modAmbalare: modAmbalare || null,
         descriere: descriere || null,
+        active: data.active !== undefined ? data.active : true,
+        onDemand: data.onDemand || false,
       },
     });
 
@@ -94,6 +115,19 @@ export async function PUT(req: NextRequest) {
     if (greutate !== undefined) updateData.greutate = greutate ? Number(greutate) : null;
     if (stoc !== undefined) updateData.stoc = Number(stoc);
     if (pret !== undefined) updateData.pret = pret ? Number(pret) : null;
+    if (data.listPrice !== undefined) updateData.listPrice = data.listPrice ? Number(data.listPrice) : null;
+    if (data.purchasePrice !== undefined) updateData.purchasePrice = data.purchasePrice ? Number(data.purchasePrice) : null;
+    if (data.currency !== undefined) updateData.currency = data.currency;
+    if (data.marime !== undefined) updateData.marime = data.marime;
+    if (data.distantaSesizare !== undefined) updateData.distantaSesizare = data.distantaSesizare;
+    if (data.tipIesire !== undefined) updateData.tipIesire = data.tipIesire;
+    if (data.tipContact !== undefined) updateData.tipContact = data.tipContact;
+    if (data.tensiune !== undefined) updateData.tensiune = data.tensiune;
+    if (data.curent !== undefined) updateData.curent = data.curent;
+    if (data.protectie !== undefined) updateData.protectie = data.protectie;
+    if (data.material !== undefined) updateData.material = data.material;
+    if (data.cablu !== undefined) updateData.cablu = data.cablu;
+    if (data.onDemand !== undefined) updateData.onDemand = data.onDemand;
     if (modAmbalare !== undefined) updateData.modAmbalare = modAmbalare;
     if (modAmbalareEn !== undefined) updateData.modAmbalareEn = modAmbalareEn;
     if (descriere !== undefined) updateData.descriere = descriere;

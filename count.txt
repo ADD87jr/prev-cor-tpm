@@ -1,0 +1,15 @@
+﻿[dotenv@17.2.4] injecting env (21) from .env.local -- tip: ≡ƒöÉ prevent committing .env to code: https://dotenvx.com/precommit
+Conectare la Turso: libsql://prevcortpm-add87jr.aws-eu-west-1.turso.io
+Total produse ├«n DB: 25
+
+Primele 10 produse:
+  1: Senzor inductiv de proximitate IG0094 (IGA2008-BBOA) - /uploads/img_1773079599050.jpg
+  2: Senzor inductiv de proximitate  IG5594 (IGA2005-FRKG/PH) - /uploads/img_1773080610380.jpg
+  3: Senzor inductiv de proximitate E2E-X5ME1 (DEL-E2EX5ME1) - /uploads/img_1773083239638.jpeg
+  4: Senzor inductiv de proximitate IME12-04BPSZW2S (1040766) - /uploads/img_1773085008649.jpeg
+  5: Senzor inductiv de proximitate IME08-02BPSZT0S (1040870) - /uploads/img_1773161663236.jpeg
+  6: Senzor inductiv de proximitate BES M12MI-PSC40B-S04G (BES0068) - /uploads/img_1773163855873.jpeg
+  7: Senzor inductiv de proximitate BI5-M18-AP6X (46110) - /uploads/img_1773165435615.jpeg
+  8: Senzor inductiv NBB5-18GM50-E2 (NBB5-18GM50-E2) - /uploads/img_1773166641838.jpeg
+  9: Senzor inductiv de proximitate DW-AS-503-M18 (DW-AS-503-M18-002) - /uploads/img_1773167411293.webp
+  10: Sursa alimentare SIMATIC PM 1207/1AC/24VDC/2.5A (6EP1332-1SH71) - /uploads/img_1773246778220.jpeg

@@ -41,11 +41,14 @@ const defaultData: Record<string, any> = {
     program: "Luni - Vineri: 08:00 - 17:00",
   },
   cos: {
-    tva: 19,
+    tva: 21,
     moneda: "RON",
     livrareGratuita: 500,
     textLivrare: "Livrare gratuită pentru comenzi peste 500 RON",
     termenLivrare: "2-5 zile lucrătoare",
+    costCurierStandard: 25,
+    costCurierExpress: 40,
+    costPerKg: 1,
   },
 };
 

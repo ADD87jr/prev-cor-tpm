@@ -38,15 +38,22 @@ export default function LiveChatWidget() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Show notification badge after 3 seconds if chat is closed
+  // Show notification only when there's a new bot response (not the initial welcome message)
+  // This only triggers when user sent a message and received a response while chat is minimized
+  const [initialMessageCount] = useState(1); // Welcome message count
+  
   useEffect(() => {
-    if (!isOpen) {
-      const timer = setTimeout(() => setHasNewMessage(true), 5000);
-      return () => clearTimeout(timer);
-    } else {
+    if (!isOpen && messages.length > initialMessageCount) {
+      const lastMessage = messages[messages.length - 1];
+      // Only show notification for bot responses, not user messages
+      if (!lastMessage.isUser) {
+        setHasNewMessage(true);
+      }
+    }
+    if (isOpen) {
       setHasNewMessage(false);
     }
-  }, [isOpen]);
+  }, [isOpen, messages, initialMessageCount]);
 
   const handleSend = () => {
     if (!inputText.trim()) return;

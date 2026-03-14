@@ -44,6 +44,7 @@ function CheckoutPageInner() {
     orderError: language === "en" ? "Error processing order." : "Eroare la procesarea comenzii.",
     fillField: language === "en" ? "Please fill in:" : "Completează câmpul:",
     onDemandNoRamburs: language === "en" ? "COD/Installments not available for on-demand products." : "Ramburs/Rate indisponibile pt. produse pe comandă.",
+    priceConfirmation: language === "en" ? "Prices are indicative. We will contact you to confirm the final price before delivery." : "Prețurile sunt orientative. Vă vom contacta pentru confirmarea prețului final înainte de livrare.",
   };
   // La montarea paginii, dacă contextItems e gol, citește din localStorage
   useEffect(() => {
@@ -60,7 +61,7 @@ function CheckoutPageInner() {
   }, [contextItems]);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const paymentMethod = searchParams?.get('paymentMethod') || 'card';
+  const paymentMethod = searchParams?.get('paymentMethod') || 'transfer';
   // Preia deliveryType din query string sau localStorage/context
   const deliveryTypeParam = searchParams?.get('deliveryType');
   const [deliveryType, setDeliveryType] = useState(deliveryTypeParam || 'standard');
@@ -82,18 +83,26 @@ function CheckoutPageInner() {
   const [error, setError] = useState("");
   const isStockError = error && error.toLowerCase().includes("stoc insuficient");
   const [submitted, setSubmitted] = useState(false);
-  // TVA configurabil din admin
+  // TVA și setări curier configurabile din admin
   const [TVA_PERCENT, setTvaPercent] = useState(21);
+  const [livrareGratuita, setLivrareGratuita] = useState(500);
+  const [costCurierStandard, setCostCurierStandard] = useState(25);
+  const [costCurierExpress, setCostCurierExpress] = useState(40);
+  const [costPerKg, setCostPerKg] = useState(1);
   // State pentru verificarea produselor onDemand (din DB)
   const [hasOnDemandProducts, setHasOnDemandProducts] = useState(false);
   
-  // Încarcă TVA din setările admin
+  // Încarcă setări coș din admin
   useEffect(() => {
     fetch('/api/pages?pagina=cos')
       .then(res => res.json())
       .then(data => {
-        if (data && data.tva !== undefined) {
-          setTvaPercent(Number(data.tva));
+        if (data) {
+          if (data.tva !== undefined) setTvaPercent(Number(data.tva));
+          if (data.livrareGratuita !== undefined) setLivrareGratuita(Number(data.livrareGratuita));
+          if (data.costCurierStandard !== undefined) setCostCurierStandard(Number(data.costCurierStandard));
+          if (data.costCurierExpress !== undefined) setCostCurierExpress(Number(data.costCurierExpress));
+          if (data.costPerKg !== undefined) setCostPerKg(Number(data.costPerKg));
         }
       })
       .catch(() => {});
@@ -146,6 +155,10 @@ function CheckoutPageInner() {
     deliveryType,
     paymentMethod,
     TVA_PERCENT,
+    livrareGratuita,
+    costCurierStandard,
+    costCurierExpress,
+    costPerKg,
   });
   const totalWeight = items.reduce((sum, item) => sum + 1 * item.quantity, 0);
   const courierCost = summary.courierCost;
@@ -429,17 +442,24 @@ function CheckoutPageInner() {
             Prices are displayed in RON (Romanian Leu). International cards are automatically converted by your bank.
           </div>
         )}
+        {/* Notificare prețuri orientative */}
+        <div className="mb-4 p-3 bg-yellow-50 border border-yellow-300 rounded text-sm text-yellow-800">
+          ⚠️ {txt.priceConfirmation}
+        </div>
         <div className="flex gap-2 items-center mt-4">
           <label className="font-medium">{txt.paymentMethod}</label>
           <select name="paymentMethod" value={paymentMethod} onChange={handleChange} className="border rounded px-2 py-1">
-            <option value="card">{txt.cardOnline}</option>
+            {/* Card dezactivat temporar - prețuri orientative */}
+            {/* <option value="card">{txt.cardOnline}</option> */}
             {!hasOnDemandProducts && <option value="ramburs">{txt.cashOnDelivery}</option>}
             <option value="transfer">{txt.bankTransfer}</option>
-            {!hasOnDemandProducts && <option value="rate">{txt.installments}</option>}
+            {/* Rate dezactivate temporar - prețuri orientative */}
+            {/* {!hasOnDemandProducts && <option value="rate">{txt.installments}</option>} */}
           </select>
-          {hasOnDemandProducts && (
+          {/* Ascuns temporar - card/rate dezactivate global */}
+          {/* {hasOnDemandProducts && (
             <span className="text-xs text-orange-600 ml-2">{txt.onDemandNoRamburs}</span>
-          )}
+          )} */}
         </div>
         <h2 className="text-xl font-bold mb-2">{txt.clientData}</h2>
         <div className="flex gap-4">

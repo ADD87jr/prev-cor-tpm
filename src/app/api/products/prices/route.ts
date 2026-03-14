@@ -48,17 +48,8 @@ export async function GET(req: NextRequest) {
         // Use minimum variant price
         priceMap[p.id] = Math.min(...variantPrices);
       } else {
-        // No variants - use product price with discount
-        let displayPrice = p.price;
-        if (p.discount && p.discountType === "percent") {
-          const discountPct = Number(p.discount);
-          if (discountPct > 0) {
-            displayPrice = Math.round(p.price * (1 - discountPct / 100));
-          }
-        } else if (p.discount && p.discountType === "fixed") {
-          displayPrice = p.price - Number(p.discount);
-        }
-        priceMap[p.id] = displayPrice;
+        // No variants - price is already the final price with discount applied
+        priceMap[p.id] = p.price;
       }
     });
     

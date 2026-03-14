@@ -43,7 +43,7 @@ function CartPageInner() {
       totalNoVat: language === "en" ? "Total without VAT" : "Total fără TVA",
       vat: language === "en" ? "VAT" : "TVA",
       totalWithVat: language === "en" ? "Total with VAT" : "Total cu TVA",
-      delivery: language === "en" ? "Delivery" : "Livrare",
+      delivery: language === "en" ? "Estimated delivery" : "Livrare estimată",
       estimatedWeight: language === "en" ? "Estimated weight" : "Greutate estimată",
       continueToCheckout: language === "en" ? "Continue to checkout" : "Continuă către checkout",
       cardOnline: language === "en" ? "card online" : "card online",
@@ -65,7 +65,7 @@ function CartPageInner() {
     const [couponStatus, setCouponStatus] = useState<any>(null);
     const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
     const [showCouponField, setShowCouponField] = useState(false);
-    const [paymentMethod, setPaymentMethod] = useState("card");
+    const [paymentMethod, setPaymentMethod] = useState("transfer");
     const [pdfReady, setPdfReady] = useState(false);
     const [downloading, setDownloading] = useState(false);
   const { items, removeFromCart, clearCart, updateQuantity, updateCoupon, updateAppliedCoupon } = useCart();
@@ -97,20 +97,28 @@ function CartPageInner() {
   }, [items, appliedCoupon]);
   
   const { data: session } = useSession();
-  // TVA configurabil din admin
+  // TVA și setări curier configurabile din admin
   const [TVA_PERCENT, setTvaPercent] = useState(21);
+  const [livrareGratuita, setLivrareGratuita] = useState(500);
+  const [costCurierStandard, setCostCurierStandard] = useState(25);
+  const [costCurierExpress, setCostCurierExpress] = useState(40);
+  const [costPerKg, setCostPerKg] = useState(1);
   const [showOrderSuccess, setShowOrderSuccess] = useState(false);
   const [catalogProducts, setCatalogProducts] = useState<any[]>([]);
   // Verifică dacă există produse pe comandă (onDemand) în coș
   const [hasOnDemandProducts, setHasOnDemandProducts] = useState(false);
   
-  // Încarcă TVA din setările admin
+  // Încarcă setări coș din admin
   React.useEffect(() => {
     fetch('/api/pages?pagina=cos')
       .then(res => res.json())
       .then(data => {
-        if (data && data.tva !== undefined) {
-          setTvaPercent(Number(data.tva));
+        if (data) {
+          if (data.tva !== undefined) setTvaPercent(Number(data.tva));
+          if (data.livrareGratuita !== undefined) setLivrareGratuita(Number(data.livrareGratuita));
+          if (data.costCurierStandard !== undefined) setCostCurierStandard(Number(data.costCurierStandard));
+          if (data.costCurierExpress !== undefined) setCostCurierExpress(Number(data.costCurierExpress));
+          if (data.costPerKg !== undefined) setCostPerKg(Number(data.costPerKg));
         }
       })
       .catch(() => {});
@@ -129,7 +137,7 @@ function CartPageInner() {
       if (hasFromCart) {
         setHasOnDemandProducts(true);
         // Schimbă metoda de plată dacă e ramburs
-        if (paymentMethod === 'ramburs' || paymentMethod === 'rate') setPaymentMethod('card');
+        if (paymentMethod === 'ramburs' || paymentMethod === 'rate') setPaymentMethod('transfer');
         return;
       }
       
@@ -146,7 +154,7 @@ function CartPageInner() {
           const data = await res.json();
           setHasOnDemandProducts(data.hasOnDemand === true);
           // Schimbă metoda de plată dacă e ramburs și sunt produse onDemand
-          if (data.hasOnDemand && (paymentMethod === 'ramburs' || paymentMethod === 'rate')) setPaymentMethod('card');
+          if (data.hasOnDemand && (paymentMethod === 'ramburs' || paymentMethod === 'rate')) setPaymentMethod('transfer');
         }
       } catch (e) {
         console.log('onDemand check failed:', e);
@@ -181,6 +189,10 @@ function CartPageInner() {
     deliveryType,
     paymentMethod,
     TVA_PERCENT,
+    livrareGratuita,
+    costCurierStandard,
+    costCurierExpress,
+    costPerKg,
   });
   // Subtotal, discount, cost curier, totaluri din utilitar
   const subtotal = summary.subtotal;
@@ -411,27 +423,49 @@ function CartPageInner() {
             <div className="flex gap-2 items-center mt-4">
               <label className="font-medium">{txt.paymentMethod}:</label>
               <select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)} className="border rounded px-2 py-1">
-                <option value="card">{language === "en" ? "Card online" : "Card online"}</option>
+                {/* Card dezactivat temporar - prețuri orientative */}
+                {/* <option value="card">{language === "en" ? "Card online" : "Card online"}</option> */}
                 {!hasOnDemandProducts && <option value="ramburs">{language === "en" ? "Cash on delivery" : "Ramburs la livrare"}</option>}
                 <option value="transfer">{language === "en" ? "Bank transfer" : "Transfer bancar"}</option>
-                {!hasOnDemandProducts && <option value="rate">{language === "en" ? "Installments" : "Plată în rate"}</option>}
+                {/* Rate dezactivate temporar - prețuri orientative */}
+                {/* {!hasOnDemandProducts && <option value="rate">{language === "en" ? "Installments" : "Plată în rate"}</option>} */}
               </select>
-              {hasOnDemandProducts && (
+              {/* Mesaj ascuns temporar - card și rate dezactivate */}
+              {/* {hasOnDemandProducts && (
                 <span className="ml-2 text-xs text-orange-600">
                   {language === "en" ? "COD/Installments not available for on-demand products" : "Ramburs/Rate indisponibile pt. produse pe comandă"}
                 </span>
-              )}
+              )} */}
             </div>
             <div className="flex gap-2 items-center mt-2">
               <label className="font-medium">{txt.delivery}:</label>
               <select value={deliveryType} onChange={e => setDeliveryType(e.target.value)} className="border rounded px-2 py-1">
-                <option value="standard">{txt.standard}</option>
-                <option value="rapid">{txt.rapid}</option>
+                <option value="standard">
+                  {language === "en" 
+                    ? `Standard (1-3 days, ${costCurierStandard} lei + ${costPerKg} lei/kg)` 
+                    : `Standard (1-3 zile, ${costCurierStandard} lei + ${costPerKg} leu/kg)`}
+                </option>
+                <option value="rapid">
+                  {language === "en" 
+                    ? `Rapid (24h, ${costCurierExpress} lei + ${costPerKg} lei/kg)` 
+                    : `Rapid (24h, ${costCurierExpress} lei + ${costPerKg} leu/kg)`}
+                </option>
                 <option value="pickup">{txt.pickup}</option>
                 <option value="client">{txt.clientShipping}</option>
               </select>
               <span className="ml-2 text-gray-500">{txt.estimatedWeight}: {totalWeight} kg</span>
             </div>
+            {/* Mesaj livrare gratuită */}
+            {livrareGratuita > 0 && subtotalDupaReduceri >= livrareGratuita && deliveryType !== 'pickup' && deliveryType !== 'client' && (
+              <div className="mt-2 text-green-600 font-semibold text-sm">
+                🚚 {language === "en" ? "Free delivery!" : "Livrare gratuită!"} ({language === "en" ? "order over" : "comandă peste"} {livrareGratuita} lei)
+              </div>
+            )}
+            {livrareGratuita > 0 && subtotalDupaReduceri < livrareGratuita && deliveryType !== 'pickup' && deliveryType !== 'client' && (
+              <div className="mt-2 text-blue-600 text-sm">
+                🚚 {language === "en" ? `Free delivery for orders over ${livrareGratuita} lei` : `Livrare gratuită pentru comenzi peste ${livrareGratuita} lei`}
+              </div>
+            )}
             <Link
               href={`/checkout?paymentMethod=${paymentMethod}&deliveryType=${deliveryType}`}
               className="w-full block bg-green-600 text-white py-3 rounded-xl font-bold text-lg shadow hover:bg-green-700 transition mt-6 text-center"

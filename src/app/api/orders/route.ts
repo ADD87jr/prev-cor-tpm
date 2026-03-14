@@ -1,6 +1,6 @@
 
 import { NextResponse } from "next/server";
-import { sendEmail } from "../send-email";
+import { sendEmail } from "@/app/utils/email";
 import { prisma } from "@/lib/prisma";
 import { notifyNewOrder } from "@/lib/push-notifications";
 
@@ -60,6 +60,39 @@ export async function POST(req: Request) {
       await notifyNewOrder(String(order.id), order.total, user.email);
     } catch (e) {
       console.error("Eroare trimitere push notification:", e);
+    }
+    // Creare automată DropshipOrder pentru produse legate de dropship
+    try {
+      const items = typeof data.items === 'string' ? JSON.parse(data.items) : data.items;
+      if (Array.isArray(items)) {
+        for (const item of items) {
+          const productId = item.id || item.productId;
+          if (productId) {
+            const dropshipProduct = await prisma.dropshipProduct.findFirst({
+              where: { productId: Number(productId), status: 'active' }
+            });
+            if (dropshipProduct) {
+              const qty = item.quantity || item.qty || 1;
+              const clientPrice = (item.price || item.unitPrice || dropshipProduct.yourPrice) * qty;
+              const supplierPrice = dropshipProduct.supplierPrice * qty;
+              await prisma.dropshipOrder.create({
+                data: {
+                  orderId: order.id,
+                  dropshipProductId: dropshipProduct.id,
+                  supplierId: dropshipProduct.supplierId,
+                  quantity: qty,
+                  supplierPrice: supplierPrice,
+                  clientPrice: clientPrice,
+                  profit: clientPrice - supplierPrice,
+                  status: 'pending'
+                }
+              });
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.error("Eroare creare DropshipOrder:", e);
     }
     return NextResponse.json({ success: true, order });
   } catch (err: any) {

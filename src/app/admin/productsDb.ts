@@ -13,6 +13,7 @@ export type Product = {
   type: string;
   domain: string;
   stock: number;
+  onDemand?: boolean; // produs disponibil doar la comandă
   couponCode?: string; // cod cupon asociat
   discount?: number;   // reducere procentuală (ex: 0.15 pentru 15%) sau sumă fixă
   discountType?: "percent" | "fixed"; // tip reducere

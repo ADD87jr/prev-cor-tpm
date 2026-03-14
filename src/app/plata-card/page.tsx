@@ -18,7 +18,7 @@ function PlataCardContent() {
   // Preluare date comandă din localStorage (setate la redirect din manual-orders/new/page.tsx)
   const [orderData, setOrderData] = React.useState<any | null>(null);
   const [loadingOrder, setLoadingOrder] = React.useState(true);
-  const [defaultTva, setDefaultTva] = React.useState(19);
+  const [defaultTva, setDefaultTva] = React.useState(21);
   
   // Încarcă TVA configurat din admin
   React.useEffect(() => {

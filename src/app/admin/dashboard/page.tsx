@@ -2,6 +2,7 @@
 
 import SalesDashboard from "../SalesDashboard";
 import PushNotificationToggle from "../PushNotificationToggle";
+import AIBusinessAdvisor from "../_components/AIBusinessAdvisor";
 import { useEffect, useState } from "react";
 import React from "react";
 
@@ -179,6 +180,11 @@ export default function AdminDashboardPage() {
       {/* Notificări Push */}
       <div className="mb-6">
         <PushNotificationToggle />
+      </div>
+
+      {/* AI Business Advisor */}
+      <div className="mb-6">
+        <AIBusinessAdvisor />
       </div>
       
       {/* Mod Întreținere */}

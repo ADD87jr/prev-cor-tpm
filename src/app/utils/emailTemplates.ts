@@ -29,14 +29,14 @@ export function getWelcomeEmailHtml(userName: string): string {
             <li>✓ Oferte și promoții exclusive</li>
           </ul>
           <div style="text-align:center;margin:30px 0;">
-            <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://prev-cor-tpm.ro'}/magazin" 
+            <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://prevcortpm.ro'}/magazin" 
                style="display:inline-block;background:#1e40af;color:#fff;padding:14px 30px;border-radius:8px;text-decoration:none;font-weight:bold;">
               Explorează Magazinul
             </a>
           </div>
           <p style="color:#666;font-size:14px;border-top:1px solid #eee;padding-top:20px;margin-top:30px;">
             Dacă ai întrebări, ne poți contacta oricând la 
-            <a href="mailto:office@prev-cor-tpm.ro" style="color:#1e40af;">office@prev-cor-tpm.ro</a> 
+            <a href="mailto:office@prevcortpm.ro" style="color:#1e40af;">office@prevcortpm.ro</a> 
             sau telefonic la <strong>0735 623 509</strong>.
           </p>
         </div>
@@ -114,7 +114,7 @@ export function getShippingEmailHtml(
           
           <p style="color:#666;font-size:14px;border-top:1px solid #eee;padding-top:20px;margin-top:30px;">
             Pentru orice întrebare, contactează-ne la 
-            <a href="mailto:office@prev-cor-tpm.ro" style="color:#7c3aed;">office@prev-cor-tpm.ro</a>
+            <a href="mailto:office@prevcortpm.ro" style="color:#7c3aed;">office@prevcortpm.ro</a>
           </p>
         </div>
         <div style="background:#f8f9fa;padding:20px;text-align:center;font-size:12px;color:#666;">

@@ -90,7 +90,7 @@ export async function POST(req: NextRequest) {
               </div>
               
               <div style="text-align: center; margin-top: 30px;">
-                <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://prev-cor-tpm.ro'}/cart" 
+                <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://prevcortpm.ro'}/cart" 
                    style="display: inline-block; background: #2563eb; color: white; padding: 15px 40px; 
                           text-decoration: none; border-radius: 8px; font-size: 16px; font-weight: bold;">
                   Finalizează comanda →
@@ -115,7 +115,7 @@ export async function POST(req: NextRequest) {
         await sendEmail({
           to: cart.email,
           subject: "🛒 Produsele tale te așteaptă în coș!",
-          text: `Ai uitat produse în coș. Finalizează comanda aici: ${process.env.NEXT_PUBLIC_SITE_URL || 'https://prev-cor-tpm.ro'}/cart`,
+          text: `Ai uitat produse în coș. Finalizează comanda aici: ${process.env.NEXT_PUBLIC_SITE_URL || 'https://prevcortpm.ro'}/cart`,
           html,
         });
         

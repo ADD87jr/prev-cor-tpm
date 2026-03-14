@@ -1,8 +1,16 @@
-# Script PowerShell pentru backup local site Next.js
-# Salvează tot proiectul (fără node_modules/.next) într-un folder de backup pe Desktop
+# Script PowerShell pentru backup complet site Next.js
+# Include: fișiere proiect + baza de date (JSON + SQLite)
 
 $source = "$PSScriptRoot"
 $dest = "$env:USERPROFILE\Desktop\_backup_site"
+
+# 1. Backup baza de date (JSON + SQLite)
+Write-Host "1. Backup baza de date..."
+Set-Location $source
+node scripts/backup-database.js
+
+# 2. Backup fișiere proiect
+Write-Host "`n2. Backup fișiere proiect..."
 
 # Exclude foldere inutile
 $exclude = @('node_modules', '.next', '_backup_site')

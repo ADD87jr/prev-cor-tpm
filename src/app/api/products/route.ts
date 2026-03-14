@@ -1,25 +1,54 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { prisma } from "@/lib/prisma";
+import { getEurToRonRate } from "@/lib/exchange-rate";
 
 export async function GET() {
   const products = await prisma.product.findMany({
     include: {
       productVariants: {
         where: { active: true },
-        select: { pret: true, listPrice: true }
+        select: { pret: true, listPrice: true, currency: true }
       }
     }
   });
   
+  // Obține cursul EUR/RON pentru conversie
+  const eurToRon = await getEurToRonRate();
+  
+  // Funcție de conversie
+  const convertToRon = (price: number | null, currency: string): number | null => {
+    if (price === null || price === undefined) return null;
+    if (currency === "EUR") {
+      return Math.round(price * eurToRon * 100) / 100;
+    }
+    return price;
+  };
+  
   // Adaugă minVariantPrice și minVariantListPrice pentru fiecare produs
+  // Convertește toate prețurile în RON
   const productsWithVariantPrices = products.map(product => {
+    const originalCurrency = product.currency || "RON";
+    
+    // Convertește prețul principal
+    const priceInRon = convertToRon(product.price, originalCurrency);
+    const listPriceInRon = convertToRon(product.listPrice, originalCurrency);
+    
     const variantsWithPrices = product.productVariants.filter(v => v.pret && v.pret > 0);
     if (variantsWithPrices.length > 0) {
-      const minPrice = Math.min(...variantsWithPrices.map(v => v.pret!));
-      const variantWithMinPrice = variantsWithPrices.find(v => v.pret === minPrice);
+      // Convertește prețurile variantelor în RON
+      const convertedVariants = variantsWithPrices.map(v => ({
+        pret: convertToRon(v.pret, v.currency || originalCurrency),
+        listPrice: convertToRon(v.listPrice, v.currency || originalCurrency)
+      }));
+      const minPrice = Math.min(...convertedVariants.map(v => v.pret!));
+      const variantWithMinPrice = convertedVariants.find(v => v.pret === minPrice);
       return {
         ...product,
+        price: priceInRon,
+        listPrice: listPriceInRon,
+        currency: "RON", // Toate prețurile sunt acum în RON
+        images: typeof product.images === 'string' ? JSON.parse(product.images) : product.images,
         productVariants: undefined, // Nu trimitem toate variantele în listing
         hasVariants: true,
         minVariantPrice: minPrice,
@@ -28,6 +57,10 @@ export async function GET() {
     }
     return {
       ...product,
+      price: priceInRon,
+      listPrice: listPriceInRon,
+      currency: "RON", // Toate prețurile sunt acum în RON
+      images: typeof product.images === 'string' ? JSON.parse(product.images) : product.images,
       productVariants: undefined,
       hasVariants: product.productVariants.length > 0,
       minVariantPrice: null,

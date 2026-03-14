@@ -1,0 +1,90 @@
+[
+  {
+    "id": 1,
+    "supplierId": 2,
+    "productId": 4,
+    "supplierCode": "CR18-8DP",
+    "supplierPrice": 155.62,
+    "currency": "RON",
+    "minQuantity": 1,
+    "deliveryDays": 7,
+    "lastUpdated": "2026-03-02T18:29:56.044Z"
+  },
+  {
+    "id": 2,
+    "supplierId": 13,
+    "productId": 1,
+    "supplierCode": "PA1/AP-1A",
+    "supplierPrice": 76.71,
+    "currency": "EUR",
+    "minQuantity": 1,
+    "deliveryDays": 7,
+    "lastUpdated": "2026-03-02T17:59:54.018Z"
+  },
+  {
+    "id": 3,
+    "supplierId": 13,
+    "productId": 2,
+    "supplierCode": "PA1/AP-3A",
+    "supplierPrice": 89.77,
+    "currency": "EUR",
+    "minQuantity": 1,
+    "deliveryDays": 7,
+    "lastUpdated": "2026-03-02T18:00:59.212Z"
+  },
+  {
+    "id": 4,
+    "supplierId": 13,
+    "productId": 4,
+    "supplierCode": "PA1/AN-3A",
+    "supplierPrice": 100,
+    "currency": "EUR",
+    "minQuantity": 1,
+    "deliveryDays": 7,
+    "lastUpdated": "2026-03-02T18:02:01.331Z"
+  },
+  {
+    "id": 5,
+    "supplierId": 2,
+    "productId": 2,
+    "supplierCode": " BR200-DDTN-C-P",
+    "supplierPrice": 244.39,
+    "currency": "RON",
+    "minQuantity": 1,
+    "deliveryDays": 7,
+    "lastUpdated": "2026-03-02T18:16:36.330Z"
+  },
+  {
+    "id": 6,
+    "supplierId": 2,
+    "productId": 3,
+    "supplierCode": "PR12-4DP",
+    "supplierPrice": 82.52,
+    "currency": "RON",
+    "minQuantity": 1,
+    "deliveryDays": 7,
+    "lastUpdated": "2026-03-02T18:34:48.414Z"
+  },
+  {
+    "id": 7,
+    "supplierId": 2,
+    "productId": 5,
+    "supplierCode": "CE4T-10R-02",
+    "supplierPrice": 65.09,
+    "currency": "RON",
+    "minQuantity": 1,
+    "deliveryDays": 7,
+    "lastUpdated": "2026-03-02T18:38:36.739Z"
+  },
+  {
+    "id": 8,
+    "supplierId": 14,
+    "productId": 6,
+    "supplierCode": "6ES7214-1AG40-0XB0",
+    "supplierPrice": 306,
+    "currency": "EUR",
+    "minQuantity": 1,
+    "deliveryDays": 10,
+    "lastUpdated": "2026-03-02T19:11:16.298Z"
+  }
+]

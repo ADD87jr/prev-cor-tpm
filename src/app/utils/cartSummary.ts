@@ -1,6 +1,7 @@
 // Utilitar pentru calcul sumar coș identic cu PDF/email
-// Acceptă: produse (array), deliveryType, paymentMethod, TVA_PERCENT (default 21)
-// Returnează: subtotal, subtotalDupaReduceri, discount, courierCost, totalFaraTVA, tva, totalCuTVA, etichete
+// Acceptă: produse (array), deliveryType, paymentMethod, TVA_PERCENT, livrareGratuita, costCurierStandard, costCurierExpress, costPerKg
+// Returnează: subtotal, subtotalDupaReduceri, discount, courierCost, totalFaraTVA, tva, totalCuTVA
+// Dacă subtotalDupaReduceri >= livrareGratuita → curier = 0 RON
 
 export interface CartSummaryProduct {
   id: string|number;
@@ -31,11 +32,19 @@ export function calculateCartSummary({
   deliveryType = 'standard',
   paymentMethod = 'card',
   TVA_PERCENT = 21,
+  livrareGratuita = 500,
+  costCurierStandard = 25,
+  costCurierExpress = 40,
+  costPerKg = 1,
 }: {
   products: CartSummaryProduct[];
   deliveryType?: string;
   paymentMethod?: string;
   TVA_PERCENT?: number;
+  livrareGratuita?: number;
+  costCurierStandard?: number;
+  costCurierExpress?: number;
+  costPerKg?: number;
 }): CartSummaryResult {
   // Subtotal preț de vânzare (fără reduceri, fără TVA)
   const subtotal = products.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -69,11 +78,12 @@ export function calculateCartSummary({
   const discount = totalProductDiscount + totalCouponDiscount;
   // Greutate totală (pt. cost curier)
   const totalWeight = products.reduce((sum, item) => sum + 1 * item.quantity, 0);
-  // Cost curier (fără TVA)
+  // Cost curier (fără TVA) - livrare gratuită dacă subtotal depășește pragul
   let courierCost = 0;
   if (deliveryType === 'pickup' || deliveryType === 'client') courierCost = 0;
-  else courierCost = (deliveryType === 'standard' ? 25 : 40) + totalWeight * 1;
-  // Total fără TVA (produse cu discount + curier)
+  else if (livrareGratuita > 0 && subtotalDupaReduceri >= livrareGratuita) courierCost = 0;
+  else courierCost = (deliveryType === 'standard' ? costCurierStandard : costCurierExpress) + totalWeight * costPerKg;
+  // Prețurile sunt FĂRĂ TVA - adăugăm TVA la final
   const totalFaraTVA = subtotalDupaReduceri + courierCost;
   // TVA
   const tva = totalFaraTVA * (TVA_PERCENT / 100);

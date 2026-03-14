@@ -134,6 +134,7 @@ export default function AddProduct() {
       name: form.name || "Produs nou",
       price: Number(form.price) || 0,
       purchasePrice: Number(form.purchasePrice) || 0,
+      currency: form.currency || "RON",
       manufacturer: form.manufacturer || "",
       description: form.description || "Fără descriere",
       image: imageUrl,
@@ -254,6 +255,7 @@ export default function AddProduct() {
           <label className="block font-semibold mb-1">Tip produs</label>
           <select name="type" value={form.type} onChange={handleChange} className="w-full border rounded-lg px-2 py-2 focus:outline-blue-500 focus:ring-2 focus:ring-blue-400 transition bg-blue-50 font-semibold">
             <option value="">Alege tipul</option>
+            {/* Tipuri generale */}
             <option value="PLC">PLC</option>
             <option value="HMI">HMI</option>
             <option value="Senzor">Senzor</option>
@@ -264,6 +266,49 @@ export default function AddProduct() {
             <option value="Robotica">Robotica</option>
             <option value="Pneumatica & hidraulica">Pneumatica & hidraulica</option>
             <option value="Echipamente electrice">Echipamente electrice</option>
+            {/* Actuatoare */}
+            <option value="Actuatoare">Actuatoare</option>
+            <option value="Servomotor">Servomotor</option>
+            {/* Siemens / Automatizări clădiri */}
+            <option value="Controller automatizare clădiri">Controller automatizare clădiri</option>
+            <option value="Controller cameră">Controller cameră</option>
+            <option value="Controller universal HVAC">Controller universal HVAC</option>
+            <option value="Controller Fancoil">Controller Fancoil</option>
+            <option value="Controller cascadă">Controller cascadă</option>
+            <option value="Controller temperatură">Controller temperatură</option>
+            <option value="Controller încălzire">Controller încălzire</option>
+            <option value="Controller hotă">Controller hotă</option>
+            <option value="Modul I/O">Modul I/O</option>
+            <option value="Modul extensie">Modul extensie</option>
+            <option value="Modul extensie I/O">Modul extensie I/O</option>
+            <option value="Interfață comunicație">Interfață comunicație</option>
+            <option value="Gateway comunicație">Gateway comunicație</option>
+            <option value="Web Server BACnet">Web Server BACnet</option>
+            <option value="Touch Panel BACnet">Touch Panel BACnet</option>
+            <option value="Touch Panel TCP/IP">Touch Panel TCP/IP</option>
+            <option value="Panou operare">Panou operare</option>
+            <option value="Display universal">Display universal</option>
+            <option value="Unitate centrală control">Unitate centrală control</option>
+            <option value="Dispozitiv monitorizare">Dispozitiv monitorizare</option>
+            <option value="Indicator presiune cameră">Indicator presiune cameră</option>
+            <option value="Monitor condiții cameră">Monitor condiții cameră</option>
+            <option value="Regulator VAV">Regulator VAV</option>
+            <option value="Senzor presiune">Senzor presiune</option>
+            <option value="Senzor debit">Senzor debit</option>
+            <option value="Convertor semnal">Convertor semnal</option>
+            <option value="Transformator">Transformator</option>
+            <option value="Licență software">Licență software</option>
+            <option value="Accesoriu">Accesoriu</option>
+            <option value="Accesoriu montaj">Accesoriu montaj</option>
+            <option value="Cadru montaj">Cadru montaj</option>
+            <option value="Spare Parts">Spare Parts</option>
+            <option value="Echipament automatizare">Echipament automatizare</option>
+            {/* Senzori industriali */}
+            <option value="Senzori Industriali">Senzori Industriali</option>
+            <option value="Senzori capacitivi">Senzori capacitivi</option>
+            <option value="Senzori fotoelectrici">Senzori fotoelectrici</option>
+            <option value="Senzori inductivi">Senzori inductivi</option>
+            <option value="Butoane urgență">Butoane urgență</option>
             <option value="Altele">Altele</option>
           </select>
         </div>

@@ -75,15 +75,47 @@ export async function generateContactFormPdfBuffer(data: {
   doc.text(`Companie: ${normalizeText(data.companie || '-')}`);
   doc.moveDown(1);
 
-  // Secțiune serviciu și mesaj
+  // Secțiune solicitare (serviciu)
+  doc.fontSize(13).font("Roboto-Bold").fillColor("#b45309");
+  doc.text("Solicitare", { underline: true });
+  doc.fillColor("#000");
+  doc.moveDown(0.5);
+  doc.fontSize(12).font("Roboto").text(`Serviciu: ${normalizeText(data.serviciu)}`);
+  doc.moveDown(1);
+
+  // Secțiune detalii - parse mesajul structurat
   doc.fontSize(13).font("Roboto-Bold");
   doc.text("Detalii solicitare", { underline: true });
   doc.moveDown(0.5);
-  doc.fontSize(12).font("Roboto").text(`Serviciu dorit: ${normalizeText(data.serviciu)}`);
-  doc.moveDown(0.5);
-  doc.fontSize(12).font("Roboto").text("Mesaj:");
-  doc.font("Roboto");
-  doc.text(normalizeText(data.mesaj), { indent: 20 });
+  doc.fontSize(11).font("Roboto");
+  
+  // Parsează mesajul și afișează fiecare linie cu formatare
+  const mesajLines = data.mesaj.split('\n').filter(line => line.trim());
+  mesajLines.forEach(line => {
+    const trimmedLine = line.trim();
+    
+    // Verifică dacă e un header de secțiune
+    if (trimmedLine === 'TIP CLIENT: Companie' || trimmedLine === 'TIP CLIENT: Persoana fizica') {
+      doc.font("Roboto-Bold").text(normalizeText(trimmedLine));
+      doc.font("Roboto");
+    } else if (trimmedLine.startsWith('PRODUS SOLICITAT:') || 
+               trimmedLine.startsWith('VARIANTE SOLICITATE:') || 
+               trimmedLine.startsWith('MESAJ SUPLIMENTAR:')) {
+      doc.moveDown(0.5);
+      doc.font("Roboto-Bold").text(normalizeText(trimmedLine));
+      doc.font("Roboto");
+    } else if (trimmedLine.startsWith('- ')) {
+      // Variante cu bullet
+      doc.text(`  ${normalizeText(trimmedLine)}`);
+    } else if (trimmedLine.includes(':')) {
+      // Câmpuri cu label: value
+      const [label, ...valueParts] = trimmedLine.split(':');
+      const value = valueParts.join(':').trim();
+      doc.text(`${normalizeText(label)}: ${normalizeText(value)}`);
+    } else {
+      doc.text(normalizeText(trimmedLine));
+    }
+  });
   doc.moveDown(2);
 
   // GDPR/disclaimer

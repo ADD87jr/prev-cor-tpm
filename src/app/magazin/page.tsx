@@ -29,7 +29,7 @@ export default function MagazinOnline() {
     "Actuatoare",
     "Pompe"
   ];
-  const [products, setProducts] = useState<Array<{ id: number; name: string; productCode?: string; price: number; purchasePrice?: number; stock: number; type: string; domain: string; image: string; currency: string; discount?: { value: number; type: "percent" | "fixed"; }; }>>([]);
+  const [products, setProducts] = useState<Array<{ id: number; name: string; productCode?: string; price: number; listPrice?: number; purchasePrice?: number; stock: number; type: string; domain: string; image: string; currency: string; discount?: { value: number; type: "percent" | "fixed"; }; }>>([]);
   const [filterType, setFilterType] = useState<string>("");
   const [filterDomain, setFilterDomain] = useState<string>("");
   const [filterCurrency, setFilterCurrency] = useState<string>("");
@@ -116,22 +116,14 @@ export default function MagazinOnline() {
             {prod.productCode && (
               <div className="mb-1 text-xs text-gray-500 font-mono">Cod produs: {prod.productCode}</div>
             )}
-            {/* Preț cu discount */}
-            {prod.discount && prod.discount.type === "percent" && Number(prod.discount.value) > 0 ? (
+            {/* Preț - price este deja prețul final cu discount aplicat */}
+            {prod.listPrice && prod.listPrice > prod.price ? (
               <div className="mb-1">
-                <span className="line-through text-gray-400 text-base mr-2">{prod.price} {prod.currency}</span>
+                <span className="line-through text-gray-400 text-base mr-2">{prod.listPrice} {prod.currency}</span>
                 <span className="font-bold text-lg text-green-700 mr-2">
-                  {Math.ceil(prod.price * (1 - Number(prod.discount.value) / 100))} {prod.currency}
+                  {prod.price} {prod.currency}
                 </span>
-                <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-semibold">-{Number(prod.discount.value)}%</span>
-              </div>
-            ) : prod.discount && prod.discount.type === "fixed" && Number(prod.discount.value) > 0 ? (
-              <div className="mb-1">
-                <span className="line-through text-gray-400 text-base mr-2">{prod.price} {prod.currency}</span>
-                <span className="font-bold text-lg text-green-700 mr-2">
-                  {Number(prod.price - Number(prod.discount.value)).toFixed(2)} {prod.currency}
-                </span>
-                <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-semibold">-{prod.discount.value} {prod.currency}</span>
+                <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-semibold">-{Math.round((1 - prod.price / prod.listPrice) * 100)}%</span>
               </div>
             ) : (
               <div className="mb-1">Preț: {prod.price} {prod.currency}</div>

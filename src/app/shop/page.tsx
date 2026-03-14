@@ -56,6 +56,7 @@ function CompareModal({ compare, onClose }: { compare: any[], onClose: () => voi
     price: language === "en" ? "Price" : "Preț",
     stock: language === "en" ? "Stock" : "Stoc",
     outOfStock: language === "en" ? "Out of stock" : "Stoc epuizat",
+    onDemand: language === "en" ? "On order" : "Pe comandă",
     type: language === "en" ? "Type" : "Tip",
     domain: language === "en" ? "Domain" : "Domeniu",
     manufacturer: language === "en" ? "Manufacturer" : "Producător",
@@ -65,13 +66,23 @@ function CompareModal({ compare, onClose }: { compare: any[], onClose: () => voi
   };
   if (!compare.length) return null;
   return (
-    <div id="compare-modal" className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center">
-      <div className="bg-white rounded-xl shadow-xl p-8 max-w-5xl w-full relative overflow-x-auto">
-        <button onClick={onClose} className="absolute top-2 right-2 text-2xl text-gray-400 hover:text-red-600">×</button>
-        <h2 className="text-2xl font-bold mb-6 text-blue-700">{t.title}</h2>
-        <div className="overflow-x-auto">
+    <div id="compare-modal" className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-xl shadow-2xl max-w-5xl w-full max-h-[90vh] flex flex-col relative" onClick={e => e.stopPropagation()}>
+        {/* Header fix */}
+        <div className="flex justify-between items-center p-4 border-b bg-white rounded-t-xl sticky top-0 z-10">
+          <h2 className="text-2xl font-bold text-blue-700">{t.title}</h2>
+          <button 
+            onClick={onClose} 
+            className="w-10 h-10 flex items-center justify-center text-2xl text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full transition"
+          >
+            ×
+          </button>
+        </div>
+        
+        {/* Conținut cu scroll */}
+        <div className="overflow-auto flex-1 p-4">
           <table className="min-w-full border text-sm">
-            <thead>
+            <thead className="sticky top-0 bg-white">
               <tr>
                 <th className="border px-2 py-1 bg-gray-50">{t.specification}</th>
                 {compare.map((p) => (
@@ -89,13 +100,13 @@ function CompareModal({ compare, onClose }: { compare: any[], onClose: () => voi
               <tr>
                 <td className="border px-2 py-1 font-semibold">{t.price}</td>
                 {compare.map((p) => (
-                  <td key={p.id} className="border px-2 py-1">{p.price} RON</td>
+                  <td key={p.id} className="border px-2 py-1">{p.price} {p.currency || "RON"}</td>
                 ))}
               </tr>
               <tr>
                 <td className="border px-2 py-1 font-semibold">{t.stock}</td>
                 {compare.map((p) => (
-                  <td key={p.id} className="border px-2 py-1">{typeof p.stock === 'number' ? (p.stock > 0 ? p.stock : <span className="text-red-600">{t.outOfStock}</span>) : '-'}</td>
+                  <td key={p.id} className="border px-2 py-1">{typeof p.stock === 'number' ? (p.stock > 0 ? p.stock : (p.deliveryTime || p.onDemand ? <span className="text-orange-500">📦 {t.onDemand}</span> : <span className="text-red-600">{t.outOfStock}</span>)) : '-'}</td>
                 ))}
               </tr>
               <tr>
@@ -136,6 +147,16 @@ function CompareModal({ compare, onClose }: { compare: any[], onClose: () => voi
               </tr>
             </tbody>
           </table>
+        </div>
+        
+        {/* Footer */}
+        <div className="p-4 border-t bg-gray-50 rounded-b-xl flex justify-end">
+          <button 
+            onClick={onClose}
+            className="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition font-semibold"
+          >
+            {language === "en" ? "Close" : "Închide"}
+          </button>
         </div>
       </div>
     </div>
@@ -224,7 +245,7 @@ export default function ShopPage() {
     viewDetails: language === "en" ? "View details" : "Vezi detalii",
     stock: language === "en" ? "Stock" : "Stoc",
     outOfStock: language === "en" ? "Out of stock" : "Stoc epuizat",
-    delivery: language === "en" ? "Delivery" : "Livrare",
+    delivery: language === "en" ? "Estimated delivery" : "Livrare estimată",
     onRequest: language === "en" ? "On request" : "La cerere",
     productCode: language === "en" ? "Product code" : "Cod produs",
     addedToCart: language === "en" ? "has been added to cart!" : "a fost adăugat în coș!",
@@ -280,6 +301,7 @@ export default function ShopPage() {
   const [priceMin, setPriceMin] = useState("");
   const [priceMax, setPriceMax] = useState("");
   const [manufacturer, setManufacturer] = useState("");
+  const [showAllTypes, setShowAllTypes] = useState(false);
   const [page, setPage] = useState(1);
   const pageSize = 6;
   const [bannerIdx, setBannerIdx] = useState(0);
@@ -287,6 +309,8 @@ export default function ShopPage() {
   const [products, setProducts] = useState<any[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [promoBanners, setPromoBanners] = useState<{title: string, titleEn?: string, text: string, textEn?: string, image: string, active?: boolean}[]>([]);
+  // Categorii din admin
+  const [categories, setCategories] = useState<{domains: any[], types: any[], manufacturers: any[]}>({ domains: [], types: [], manufacturers: [] });
   // --- Comparare produse ---
   const { compare, toggleCompare, clearCompare } = useCompareProducts();
   const [showCompareModal, setShowCompareModal] = useState(false);
@@ -295,14 +319,18 @@ export default function ShopPage() {
     setLoadingProducts(true);
     Promise.all([
       fetch("/api/products").then(res => res.json()),
-      fetch("/api/promotii").then(res => res.json())
+      fetch("/api/promotii").then(res => res.json()),
+      fetch("/admin/api/product-categories").then(res => res.json())
     ])
-      .then(([productsData, promosData]) => {
+      .then(([productsData, promosData, categoriesData]) => {
         setProducts(productsData);
         const activePromos = (promosData || []).filter((p: any) => p.active !== false);
         setPromoBanners(activePromos.length > 0 ? activePromos : [
           { title: "Magazin Online", text: "Cele mai bune produse pentru tine!", image: "", active: true }
         ]);
+        if (categoriesData.domains || categoriesData.types || categoriesData.manufacturers) {
+          setCategories(categoriesData);
+        }
       })
       .catch(() => {
         setProducts([]);
@@ -318,9 +346,33 @@ export default function ShopPage() {
     return () => window.removeEventListener('hashchange', onHash);
   }, []);
 
-  const fixedTypes = Array.from(new Set(products.map(p => p.type)));
-  const uniqueDomains = Array.from(new Set(products.map(p => p.domain)));
-  const uniqueManufacturers = Array.from(new Set(products.map(p => p.manufacturer).filter(Boolean))) as string[];
+  // Extrage domeniile și tipurile din categoriile admin (cu fallback la produse)
+  const uniqueDomains = categories.domains.length > 0 
+    ? categories.domains.map(d => d.name) 
+    : Array.from(new Set(products.map(p => p.domain)));
+  
+  // Găsește domainId pentru domeniul selectat
+  const selectedDomainId = domain ? categories.domains.find(d => d.name === domain)?.id : undefined;
+  
+  // Filtreaza tipurile bazat pe domeniul selectat (ierarhic)
+  const filteredTypes = categories.types.length > 0
+    ? categories.types.filter(t => !selectedDomainId || !t.domainId || t.domainId === selectedDomainId)
+    : [];
+  const fixedTypes = filteredTypes.length > 0
+    ? filteredTypes.map(t => t.name)
+    : Array.from(new Set(products.map(p => p.type)));
+  const uniqueManufacturers = categories.manufacturers.length > 0
+    ? categories.manufacturers.map(m => m.name)
+    : Array.from(new Set(products.map(p => p.manufacturer).filter(Boolean))) as string[];
+  
+  // Reseteaza tipul daca nu mai e valid pentru domeniul selectat
+  useEffect(() => {
+    if (type && !fixedTypes.includes(type)) {
+      setType('');
+    }
+    setShowAllTypes(false); // Resetează expandarea la schimbarea domeniului
+  }, [domain, type, fixedTypes]);
+  
   let filtered = products.filter(p =>
     (type ? p.type === type : true) &&
     (domain ? p.domain === domain : true) &&
@@ -336,6 +388,8 @@ export default function ShopPage() {
   );
   if (sort === "pret-cresc") filtered = [...filtered].sort((a, b) => a.price - b.price);
   if (sort === "pret-desc") filtered = [...filtered].sort((a, b) => b.price - a.price);
+  if (sort === "nume-az") filtered = [...filtered].sort((a, b) => getProductName(a).localeCompare(getProductName(b)));
+  if (sort === "cele-mai-noi") filtered = [...filtered].sort((a, b) => b.id - a.id);
   const totalPages = Math.ceil(filtered.length / pageSize);
   const pagedProducts = filtered.slice((page - 1) * pageSize, page * pageSize);
 
@@ -413,50 +467,86 @@ export default function ShopPage() {
                 );
           })}
         </div>
-        {/* Tipuri */}
-        <div className="flex flex-wrap justify-center gap-2">
-          <button
-            className={"px-4 py-2 rounded-full border font-semibold shadow transition-all bg-blue-700 text-white border-blue-700 scale-105"}
-            onClick={() => setType('')}
-          >
-            {txt.subDomains}
-          </button>
-          {fixedTypes.map((t) => {
-            const hasProducts = products.some(p => p.type === t);
-            const btnClass = `px-4 py-2 rounded-full border font-semibold shadow transition-all ${type === t ? 'bg-blue-700 text-white border-blue-700 scale-105' : 'bg-white text-blue-700 border-blue-300'} ${!hasProducts ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-50'}`;
-            return hasProducts
-              ? (
-                  <button
-                    key={t}
-                    className={btnClass}
-                    onClick={() => setType(t)}
-                  >
-                    {translateType(t).toLowerCase()}
-                  </button>
-                )
-              : (
-                  <button
-                    key={t}
-                    className={btnClass}
-                    disabled={true}
-                  >
-                    {translateType(t)}
-                  </button>
-                );
-          })}
-        </div>
+        {/* Tipuri - afișate doar când e selectat un domeniu */}
+        {domain && fixedTypes.length > 0 && (
+          <div className="flex flex-wrap justify-center gap-2">
+            <button
+              className={"px-4 py-2 rounded-full border font-semibold shadow transition-all bg-blue-700 text-white border-blue-700 scale-105"}
+              onClick={() => setType('')}
+            >
+              {txt.subDomains}
+            </button>
+            {(showAllTypes ? fixedTypes : fixedTypes.slice(0, 8)).map((t) => {
+              const hasProducts = products.some(p => p.type === t && p.domain === domain);
+              const btnClass = `px-4 py-2 rounded-full border font-semibold shadow transition-all ${type === t ? 'bg-blue-700 text-white border-blue-700 scale-105' : 'bg-white text-blue-700 border-blue-300'} ${!hasProducts ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-50'}`;
+              return hasProducts
+                ? (
+                    <button
+                      key={t}
+                      className={btnClass}
+                      onClick={() => setType(t)}
+                    >
+                      {translateType(t).toLowerCase()}
+                    </button>
+                  )
+                : (
+                    <button
+                      key={t}
+                      className={btnClass}
+                      disabled={true}
+                    >
+                      {translateType(t)}
+                    </button>
+                  );
+            })}
+            {fixedTypes.length > 8 && (
+              <button
+                className="px-4 py-2 rounded-full border font-semibold shadow transition-all bg-gray-100 text-blue-700 border-blue-300 hover:bg-blue-50"
+                onClick={() => setShowAllTypes(!showAllTypes)}
+              >
+                {showAllTypes ? (language === "en" ? "Show less" : "Mai puține") : `+${fixedTypes.length - 8} ${language === "en" ? "more" : "altele"}`}
+              </button>
+            )}
+          </div>
+        )}
       </div>
       {/* Filtre avansate: căutare, disponibilitate, promoții, sortare */}
       <div className="flex flex-wrap items-center justify-center gap-4 mb-6 bg-gray-50 rounded-xl p-4 shadow-inner">
-        {/* Căutare */}
-        <div className="flex items-center gap-2">
+        {/* Căutare cu autocomplete */}
+        <div className="flex items-center gap-2 relative">
+          {/* Input ascuns care absoarbe autofill-ul browserului */}
+          <input type="text" name="prevent-autofill" autoComplete="email" className="hidden" tabIndex={-1} aria-hidden="true" />
           <input
             type="text"
             placeholder={txt.searchPlaceholder}
             value={search}
             onChange={e => { setSearch(e.target.value); setPage(1); }}
             className="px-3 py-2 border rounded-lg w-48 focus:ring-2 focus:ring-blue-400 focus:outline-none"
+            autoComplete="off"
+            data-lpignore="true"
+            data-form-type="other"
+            name="shop-product-filter"
           />
+          {search.length >= 2 && (() => {
+            const suggestions = products
+              .filter(p => getProductName(p).toLowerCase().includes(search.toLowerCase()))
+              .slice(0, 5);
+            if (suggestions.length === 0) return null;
+            return (
+              <div className="absolute top-full left-0 mt-1 bg-white border rounded-lg shadow-lg z-50 w-64 max-h-60 overflow-y-auto">
+                {suggestions.map(p => (
+                  <a
+                    key={p.id}
+                    href={`/shop/${p.id}`}
+                    className="block px-3 py-2 hover:bg-blue-50 text-sm border-b last:border-b-0"
+                  >
+                    <span className="font-medium">{getProductName(p)}</span>
+                    <span className="text-gray-500 ml-2">{p.price} {p.currency || "RON"}</span>
+                  </a>
+                ))}
+              </div>
+            );
+          })()}
         </div>
         {/* Producător */}
         {uniqueManufacturers.length > 0 && (
@@ -505,6 +595,8 @@ export default function ShopPage() {
             <option value="relevanta">{txt.relevance}</option>
             <option value="pret-cresc">{txt.priceAsc}</option>
             <option value="pret-desc">{txt.priceDesc}</option>
+            <option value="nume-az">{language === "en" ? "Name A-Z" : "Nume A-Z"}</option>
+            <option value="cele-mai-noi">{language === "en" ? "Newest" : "Cele mai noi"}</option>
           </select>
         </div>
         {/* Doar în stoc */}
@@ -534,6 +626,12 @@ export default function ShopPage() {
         >
           {txt.resetFilters}
         </button>
+      </div>
+      {/* Notă prețuri orientative */}
+      <div className="text-center text-xs text-gray-500 italic mb-4">
+        {language === "en" 
+          ? "* Indicative prices excl. VAT - contact us for a personalized offer" 
+          : "* Prețuri orientative fără TVA - contactați-ne pentru ofertă personalizată"}
       </div>
       {/* Toggle grid/list view */}
       <div className="flex justify-end mb-4 gap-2">
@@ -644,6 +742,14 @@ export default function ShopPage() {
             // Prioritate: preț din variante > preț produs
             const useVariantPrices = product.hasVariants && product.minVariantPrice;
             
+            // Detectare produse configurabile (PLC, Unitronics, Delta etc.)
+            const configurableKeywords = ["PLC", "POU", "Unitronics", "Delta DVP", "V130", "V350", "V700", "V1040", "V1210", "Vision", "UniStream", "DVP", "S7-1200", "S7-1500", "LOGO!", "M221", "M241", "M251"];
+            const pName = (product.name || "").toLowerCase();
+            const pSku = (product.sku || "").toLowerCase();
+            const isConfigurable = configurableKeywords.some(kw => 
+              pName.includes(kw.toLowerCase()) || pSku.includes(kw.toLowerCase())
+            );
+            
             let displayPrice: number;
             let displayListPrice: number | null = null;
             let calculatedDiscount = 0;
@@ -658,17 +764,11 @@ export default function ShopPage() {
                 calculatedDiscount = Math.round((1 - displayPrice / displayListPrice) * 100);
               }
             } else {
-              // Folosește prețul produsului
+              // Folosește prețul produsului - price este deja prețul final cu discount aplicat
               displayPrice = product.price;
               displayListPrice = product.listPrice;
-              const discountPercent = product.discountType === "percent"
-                ? (product.discount > 1 ? product.discount : product.discount * 100)
-                : 0;
-              if (discountPercent > 0) {
-                displayListPrice = product.price;
-                displayPrice = parseFloat((product.price * (1 - discountPercent / 100)).toFixed(2));
-                calculatedDiscount = Math.round(discountPercent);
-              } else if (product.listPrice && product.listPrice > product.price) {
+              // Calculează discount-ul din diferența între listPrice și price
+              if (product.listPrice && product.listPrice > product.price) {
                 calculatedDiscount = Math.round((1 - product.price / product.listPrice) * 100);
               }
             }
@@ -719,18 +819,21 @@ export default function ShopPage() {
                   </button>
                 </a>
                 <div className="flex flex-col items-center mt-auto">
-                  <div className="flex items-center gap-2 mb-2">
+                  <div className="flex items-center gap-2 mb-1">
                     <span className="text-blue-700 font-bold text-xl">
                       {showFromLabel && <span className="text-gray-500 text-sm font-normal mr-1">{language === "en" ? "from" : "de la"}</span>}
                       {calculatedDiscount > 0 && displayListPrice ? (
                         <>
-                          <span className="line-through text-gray-400 text-base mr-1">{displayListPrice.toFixed(2)} RON</span>
-                          <span>{displayPrice.toFixed(2)} RON</span>
+                          <span className="line-through text-gray-400 text-base mr-1">{displayListPrice.toFixed(2)} {product.currency || "RON"}</span>
+                          <span>{displayPrice.toFixed(2)} {product.currency || "RON"}</span>
                         </>
                       ) : (
-                        <>{displayPrice.toFixed(2)} RON</>
+                        <>{displayPrice.toFixed(2)} {product.currency || "RON"}</>
                       )}
                     </span>
+                  </div>
+                  <div className="text-[10px] text-gray-400 italic mb-2 text-center leading-tight">
+                    {language === "en" ? "* Indicative prices excl. VAT - contact us for offer" : "* Prețuri orientative fără TVA - contactați-ne pentru ofertă"}
                   </div>
                   {/* Eliminat afișarea codului de cupon */}
                   <button
@@ -761,8 +864,18 @@ export default function ShopPage() {
                   >
                     <MdShoppingCart className="w-5 h-5" /> {product.hasVariants ? (language === "en" ? "Select variant" : "Selectează varianta") : txt.addToCart}
                   </button>
+                  {/* Buton Configurator pentru produse configurabile */}
+                  {isConfigurable && (
+                    <Link
+                      href={`/configurator?sku=${product.sku || ''}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-4 py-2 rounded-lg font-semibold transition w-full mt-2 flex items-center justify-center gap-2 text-sm shadow-lg"
+                    >
+                      🔧 {language === "en" ? "Configure" : "Configurează"}
+                    </Link>
+                  )}
                   <div className="text-xs mt-2 text-gray-500 text-center">
-                    <span>{product.onDemand ? <span className="text-orange-600 font-semibold">{txt.availableOnDemand}</span> : <>{txt.stock}: {typeof product.stock === "number" ? (product.stock > 0 ? product.stock : <span className="text-red-600 font-semibold">{txt.outOfStock}</span>) : "-"}</>}</span>
+                    <span>{(product.onDemand || product.deliveryTime) ? <span className="text-orange-600 font-semibold">{txt.availableOnDemand}</span> : <>{txt.stock}: {typeof product.stock === "number" ? (product.stock > 0 ? product.stock : <span className="text-red-600 font-semibold">{txt.outOfStock}</span>) : "-"}</>}</span>
                     <span className="ml-2">{txt.delivery}: {getDeliveryTime(product) ?? txt.onRequest}</span>
                   </div>
                 </div>
@@ -775,6 +888,14 @@ export default function ShopPage() {
           {pagedProducts.map((product) => {
             // Prioritate: preț din variante > preț produs (pentru list view)
             const useVariantPricesL = product.hasVariants && product.minVariantPrice;
+            
+            // Detectare produse configurabile (PLC, Unitronics, Delta etc.)
+            const configurableKeywordsL = ["PLC", "POU", "Unitronics", "Delta DVP", "V130", "V350", "V700", "V1040", "V1210", "Vision", "UniStream", "DVP", "S7-1200", "S7-1500", "LOGO!", "M221", "M241", "M251"];
+            const pNameL = (product.name || "").toLowerCase();
+            const pSkuL = (product.sku || "").toLowerCase();
+            const isConfigurableL = configurableKeywordsL.some(kw => 
+              pNameL.includes(kw.toLowerCase()) || pSkuL.includes(kw.toLowerCase())
+            );
             
             let displayPriceL: number;
             let displayListPriceL: number | null = null;
@@ -789,16 +910,10 @@ export default function ShopPage() {
                 calculatedDiscountL = Math.round((1 - displayPriceL / displayListPriceL) * 100);
               }
             } else {
+              // product.price este deja prețul final cu discount aplicat
               displayPriceL = product.price;
               displayListPriceL = product.listPrice;
-              const discountPercentL = product.discountType === "percent"
-                ? (product.discount > 1 ? product.discount : product.discount * 100)
-                : 0;
-              if (discountPercentL > 0) {
-                displayListPriceL = product.price;
-                displayPriceL = parseFloat((product.price * (1 - discountPercentL / 100)).toFixed(2));
-                calculatedDiscountL = Math.round(discountPercentL);
-              } else if (product.listPrice && product.listPrice > product.price) {
+              if (product.listPrice && product.listPrice > product.price) {
                 calculatedDiscountL = Math.round((1 - product.price / product.listPrice) * 100);
               }
             }
@@ -841,18 +956,21 @@ export default function ShopPage() {
                     <div className="mb-1 text-xs text-gray-500 font-mono">{txt.productCode}: {product.productCode}</div>
                   )}
                 </a>
-                <div className="flex items-center gap-2 mb-2 mt-1">
+                <div className="flex items-center gap-2 mb-1 mt-1">
                   <span className="text-blue-700 font-bold text-base">
                     {showFromLabelL && <span className="text-gray-500 text-sm font-normal mr-1">{language === "en" ? "from" : "de la"}</span>}
                     {calculatedDiscountL > 0 && displayListPriceL ? (
                       <>
-                        <span className="line-through text-gray-400 text-sm mr-1">{displayListPriceL.toFixed(2)} RON</span>
-                        <span>{displayPriceL.toFixed(2)} RON</span>
+                        <span className="line-through text-gray-400 text-sm mr-1">{displayListPriceL.toFixed(2)} {product.currency || "RON"}</span>
+                        <span>{displayPriceL.toFixed(2)} {product.currency || "RON"}</span>
                       </>
                     ) : (
-                      <>{displayPriceL.toFixed(2)} RON</>
+                      <>{displayPriceL.toFixed(2)} {product.currency || "RON"}</>
                     )}
                   </span>
+                </div>
+                <div className="text-[10px] text-gray-400 italic mb-1 leading-tight">
+                  {language === "en" ? "* Indicative prices excl. VAT - contact us for offer" : "* Prețuri orientative fără TVA - contactați-ne pentru ofertă"}
                 </div>
                 {/* Eliminat afișarea codului de cupon din listă */}
                 <button
@@ -881,8 +999,18 @@ export default function ShopPage() {
                 >
                   <MdShoppingCart className="w-4 h-4" /> {product.hasVariants ? (language === "en" ? "Select variant" : "Selectează varianta") : txt.addToCart}
                 </button>
+                {/* Buton Configurator pentru produse configurabile - List View */}
+                {isConfigurableL && (
+                  <Link
+                    href={`/configurator?sku=${product.sku || ''}`}
+                    onClick={(e) => e.stopPropagation()}
+                    className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-3 py-1 rounded-lg font-semibold transition flex items-center justify-center gap-1 text-sm shadow mt-1"
+                  >
+                    🔧 {language === "en" ? "Configure" : "Configurează"}
+                  </Link>
+                )}
                 <div className="text-xs mt-2 text-gray-500">
-                  <span>{product.onDemand ? <span className="text-orange-600 font-semibold">{txt.availableOnDemand}</span> : <>{txt.stock}: {typeof product.stock === "number" ? (product.stock > 0 ? product.stock : <span className="text-red-600 font-semibold">{txt.outOfStock}</span>) : "-"}</>}</span>
+                  <span>{(product.onDemand || product.deliveryTime) ? <span className="text-orange-600 font-semibold">{txt.availableOnDemand}</span> : <>{txt.stock}: {typeof product.stock === "number" ? (product.stock > 0 ? product.stock : <span className="text-red-600 font-semibold">{txt.outOfStock}</span>) : "-"}</>}</span>
                   <span className="ml-2">{txt.delivery}: {getDeliveryTime(product) ?? txt.onRequest}</span>
                 </div>
               </div>
@@ -907,15 +1035,51 @@ export default function ShopPage() {
               ← {txt.previous}
             </button>
             <div className="flex gap-1">
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
-                <button
-                  key={p}
-                  onClick={() => setPage(p)}
-                  className={`w-10 h-10 rounded-lg border font-semibold ${page === p ? 'bg-blue-600 text-white' : 'bg-white hover:bg-gray-100'}`}
-                >
-                  {p}
-                </button>
-              ))}
+              {(() => {
+                const pages: (number | string)[] = [];
+                const showEllipsis = totalPages > 7;
+                
+                if (!showEllipsis) {
+                  // Arată toate paginile dacă sunt puține
+                  for (let i = 1; i <= totalPages; i++) pages.push(i);
+                } else {
+                  // Prima pagină mereu
+                  pages.push(1);
+                  
+                  if (page > 3) {
+                    pages.push('...');
+                  }
+                  
+                  // Pagini din jurul celei curente
+                  const start = Math.max(2, page - 1);
+                  const end = Math.min(totalPages - 1, page + 1);
+                  
+                  for (let i = start; i <= end; i++) {
+                    if (!pages.includes(i)) pages.push(i);
+                  }
+                  
+                  if (page < totalPages - 2) {
+                    pages.push('...');
+                  }
+                  
+                  // Ultima pagină mereu
+                  if (!pages.includes(totalPages)) pages.push(totalPages);
+                }
+                
+                return pages.map((p, idx) => 
+                  p === '...' ? (
+                    <span key={`ellipsis-${idx}`} className="px-2 py-2 text-gray-500">...</span>
+                  ) : (
+                    <button
+                      key={p}
+                      onClick={() => setPage(p as number)}
+                      className={`w-10 h-10 rounded-lg border font-semibold ${page === p ? 'bg-blue-600 text-white' : 'bg-white hover:bg-gray-100'}`}
+                    >
+                      {p}
+                    </button>
+                  )
+                );
+              })()}
             </div>
             <button
               onClick={() => setPage(p => Math.min(totalPages, p + 1))}

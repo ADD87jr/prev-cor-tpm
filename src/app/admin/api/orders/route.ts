@@ -12,10 +12,21 @@ export async function GET(req: NextRequest) {
 
   try {
     const orders = await prisma.order.findMany({ include: { user: true, product: true } });
-    // Include clientData în răspuns
+    // Încarcă toate DropshipOrder-urile pentru a marca comenzile cu produse dropship
+    const dropshipOrders = await prisma.dropshipOrder.findMany({
+      select: { orderId: true, status: true }
+    });
+    const dropshipOrderMap = new Map<number, string[]>();
+    for (const dso of dropshipOrders) {
+      if (!dropshipOrderMap.has(dso.orderId)) dropshipOrderMap.set(dso.orderId, []);
+      dropshipOrderMap.get(dso.orderId)!.push(dso.status);
+    }
+    // Include clientData și hasDropship în răspuns
     const ordersWithClient = orders.map(order => ({
       ...order,
-      clientData: order.clientData || null
+      clientData: order.clientData || null,
+      hasDropship: dropshipOrderMap.has(order.id),
+      dropshipStatuses: dropshipOrderMap.get(order.id) || []
     }));
     return NextResponse.json(ordersWithClient);
   } catch (err) {
@@ -30,7 +41,7 @@ export async function PATCH(req: NextRequest) {
   const authError = await adminAuthMiddleware(req);
   if (authError) return authError;
 
-  const { orderId, status, userEmail, awb, courierName } = await req.json();
+  const { orderId, status, userEmail, awb, courierName, courierCost, total, items, clientData } = await req.json();
   let order = null;
   if (orderId) {
     // Construiește obiectul de date pentru update
@@ -44,6 +55,21 @@ export async function PATCH(req: NextRequest) {
     }
     if (courierName !== undefined) {
       updateData.courierName = courierName;
+    }
+    if (courierCost !== undefined) {
+      updateData.courierCost = courierCost;
+    }
+    if (total !== undefined) {
+      updateData.total = total;
+    }
+    if (items !== undefined) {
+      updateData.items = items;
+    }
+    if (clientData !== undefined) {
+      // Merge cu datele existente
+      const existingOrder = await prisma.order.findUnique({ where: { id: orderId } });
+      const existingClientData = (existingOrder?.clientData as Record<string, unknown>) || {};
+      updateData.clientData = { ...existingClientData, ...clientData };
     }
     
     if (Object.keys(updateData).length === 0) {
@@ -68,7 +94,8 @@ export async function PATCH(req: NextRequest) {
     try {
       const clientData = order.clientData as any || {};
       const to = userEmail || clientData.email;
-      if (to && status) {
+      // Nu trimite email automat pentru awaiting_price - emailul se trimite separat prin /api/price-confirm/send
+      if (to && status && status !== 'awaiting_price') {
         // Parse items from order
         const orderItems = (order.items as any[]) || [];
         const itemsForEmail = orderItems.map((item: any) => ({
@@ -85,11 +112,47 @@ export async function PATCH(req: NextRequest) {
           awb: order.awb || undefined,
           courierName: order.courierName || undefined,
           items: itemsForEmail,
-          total: order.total || undefined
+          total: order.total || undefined,
+          courierCost: typeof order.courierCost === 'number' ? order.courierCost : 0,
+          tvaPercent: typeof order.tva === 'number' ? order.tva : undefined
         });
       }
     } catch (e) {
       console.error('[ORDERS] Eroare la trimitere email status comandă:', e);
+    }
+
+    // Trimite automat factura când statusul devine "livrată" (cu delay 3 secunde)
+    if (status === 'livrată') {
+      const invoiceOrder = {
+        orderId: order.id,
+        id: order.id,
+        number: order.number,
+        date: order.date ? new Date(order.date).toLocaleDateString('ro-RO') : new Date().toLocaleDateString('ro-RO'),
+        items: order.items,
+        userEmail: userEmail || (order.clientData as any)?.email,
+        clientData: order.clientData as any || {},
+        deliveryType: order.deliveryType || 'standard',
+        courierCost: order.courierCost || 0,
+      };
+      if (invoiceOrder.userEmail) {
+        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+        setTimeout(async () => {
+          try {
+            const invoiceRes = await fetch(`${siteUrl}/api/send-invoice`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ order: invoiceOrder })
+            });
+            if (invoiceRes.ok) {
+              console.log(`[ORDERS] Factura trimisă automat pentru comanda #${invoiceOrder.number || invoiceOrder.id}`);
+            } else {
+              console.error(`[ORDERS] Eroare la trimitere automată factură:`, await invoiceRes.text());
+            }
+          } catch (invoiceErr) {
+            console.error('[ORDERS] Eroare la trimitere automată factură:', invoiceErr);
+          }
+        }, 3000);
+      }
     }
 
     return NextResponse.json({ success: true, order });

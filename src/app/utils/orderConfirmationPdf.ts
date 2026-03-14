@@ -1,7 +1,7 @@
 import PDFDocument from "pdfkit";
 import fs from "fs";
 import path from "path";
-import { getTvaPercent } from "@/lib/getTvaPercent";
+import { getCartSettings } from "@/lib/getTvaPercent";
 import { COMPANY_CONFIG } from "@/lib/companyConfig";
 
 export async function generateOrderConfirmationPdfBuffer(order: any, language?: string): Promise<Buffer> {
@@ -232,6 +232,8 @@ export async function generateOrderConfirmationPdfBuffer(order: any, language?: 
     let totalCouponDiscount = 0;
     let subtotal = 0;
     let subtotalDupaReduceri = 0;
+    // Citește setările de coș din admin
+    const cartSettings = await getCartSettings();
     try {
       const { calculateCartSummary } = require("../utils/cartSummary");
       const mappedProducts = produse.map((item: any) => ({
@@ -250,7 +252,15 @@ export async function generateOrderConfirmationPdfBuffer(order: any, language?: 
         productDiscountValue: item.productDiscount || null,
         couponDiscountValue: item.couponDiscount || null
       }));
-      const summary = calculateCartSummary({ products: mappedProducts });
+      const summary = calculateCartSummary({
+        products: mappedProducts,
+        deliveryType: order.deliveryType,
+        TVA_PERCENT: cartSettings.tva,
+        livrareGratuita: cartSettings.livrareGratuita,
+        costCurierStandard: cartSettings.costCurierStandard,
+        costCurierExpress: cartSettings.costCurierExpress,
+        costPerKg: cartSettings.costPerKg,
+      });
       summaryProducts = mappedProducts.map((item: any) => {
         // NU aplicăm discount suplimentar - prețul deja include reducerea de produs
         let priceAfterProductDiscount = item.price;
@@ -341,18 +351,16 @@ export async function generateOrderConfirmationPdfBuffer(order: any, language?: 
   })();
   costCurierText += ` (${label})`;
   // Subtotal, reduceri, total, TVA
-  // Folosește exact valorile din payload (plasare comandă)
-  // Folosește DOAR valorile calculate pentru sumar, nu fallback din order
+  // Prețurile sunt FĂRĂ TVA - adăugăm TVA la final
   let subtotalPretVanzareFaraTVA = subtotal;
   let subtotalDupaReduceriFaraTVA = subtotalDupaReduceri;
   let reducereTotala = totalProductDiscount + totalCouponDiscount;
   let costCurierValPdf = typeof order.courierCost === 'number' ? order.courierCost : costCurier;
-  // Folosește mereu cost curier din payload
+  // Total fără TVA
   const totalFaraTVA = subtotalDupaReduceriFaraTVA + (typeof order.courierCost === 'number' ? order.courierCost : 0);
-  // TVA din order sau din config admin
-  const configTva = await getTvaPercent();
-  let tvaPercent = typeof order.tva === 'number' && !isNaN(order.tva) ? order.tva : configTva;
-  // TVA și total cu TVA corect, pe baza totalului fără TVA
+  // TVA din order sau din config admin (cartSettings deja citit mai sus)
+  let tvaPercent = typeof order.tva === 'number' && !isNaN(order.tva) ? order.tva : cartSettings.tva;
+  // TVA și total cu TVA
   const tva = Math.round(totalFaraTVA * tvaPercent / 100 * 100) / 100;
   const totalCuTVA = Math.round((totalFaraTVA + tva) * 100) / 100;
   function summaryRow(label: string, value: string, color: string = '#000', fontSize = 12, fontWeight: 'normal' | 'bold' = 'bold') {

@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider        = "prisma-client-js"
   previewFeatures = ["driverAdapters"]
@@ -15,75 +9,75 @@ datasource db {
 }
 
 model Product {
-  id            Int      @id @default(autoincrement())
-  name          String
-  nameEn        String?  // denumire în engleză
-  price         Float
-  listPrice     Float?   // preț de listă (fără discount)
-  purchasePrice Float?   // preț de intrare
-  manufacturer  String?  // producător
-  description   String
-  descriptionEn String?  // descriere în engleză
-  image         String
-  images        Json?    // galerie imagini - array de URL-uri
-  type          String
-  domain        String
-  stock         Int
-  onDemand      Boolean  @default(false) // produs disponibil doar la comandă
-  sku           String?  // cod produs
-  brand         String?  // brand
-  variants      Json?    // variante produs [{name, value, stock, priceAdjust}]
-  // ...câmpuri eliminate: dimensions, weight
-  deliveryTime   String?  // termen de livrare estimat (ex: "2-3 zile")
-  deliveryTimeEn String?  // delivery time in English (e.g., "2-3 days")
-  specs          Json?    // specificații tehnice (array de stringuri)
-  specsEn        Json?    // specs in English (array of strings)
-  advantages     Json?    // avantaje (array de stringuri)
-  advantagesEn   Json?    // advantages in English (array of strings)
-  couponCode    String?   // cod cupon asociat
-  discount      Float?    // valoare reducere (procent sau sumă)
-  discountType  String?  // tip reducere: percent/fixed
-  pdfUrl        String?  // calea către fișa tehnică PDF
-  pdfUrlEn      String?  // calea către fișa tehnică PDF (engleză)
-  safetySheetUrl String? // calea către fișa de securitate (SDS/MSDS)
-  safetySheetUrlEn String? // calea către fișa de securitate (engleză)
-  orders        Order[]
-  productVariants ProductVariant[]
+  id               Int              @id @default(autoincrement())
+  name             String
+  nameEn           String?
+  price            Float
+  listPrice        Float?
+  purchasePrice    Float?
+  currency         String           @default("RON")
+  manufacturer     String?
+  description      String
+  descriptionEn    String?
+  image            String
+  images           Json?
+  type             String
+  domain           String
+  stock            Int
+  onDemand         Boolean          @default(false)
+  sku              String?
+  brand            String?
+  variants         Json?
+  deliveryTime     String?
+  deliveryTimeEn   String?
+  specs            Json?
+  specsEn          Json?
+  advantages       Json?
+  advantagesEn     Json?
+  couponCode       String?
+  discount         Float?
+  discountType     String?
+  pdfUrl           String?
+  pdfUrlEn         String?
+  safetySheetUrl   String?
+  safetySheetUrlEn String?
+  model3dUrl       String?
+  orders           Order[]
+  productVariants  ProductVariant[]
 }
 
 model ProductVariant {
-  id            Int     @id @default(autoincrement())
-  productId     Int
-  code          String  // cod variantă (ex: SKU variantă)
-  // Atribute tehnice pentru senzori și componente industriale
-  marime        String? // mărime (ex: M4, M8, M12)
-  marimeEn      String? // mărime - traducere engleză
-  distantaSesizare String? // distanță de sesizare (ex: 0.6 mm, 1 mm)
-  tipIesire     String? // tip ieșire (ex: PNP, NPN)
-  tipContact    String? // tip contact (ex: NO, NC, NO+NC)
-  tensiune      String? // tensiune alimentare (ex: 10-30V DC)
-  curent        String? // curent maxim (ex: 200mA)
-  protectie     String? // clasă protecție (ex: IP67)
-  material      String? // material carcasă (ex: Oțel inox, Alamă nichelată)
-  cablu         String? // tip cablu (ex: 2m PVC, Conector M8)
-  // Câmpuri existente
-  compatibil    String? // compatibilitate
-  compatibilEn  String? // compatibilitate - traducere engleză
-  greutate      Float?  // greutate (în kg)
-  stoc          Int     @default(0) // stoc variantă
-  pret          Float?  // preț variantă (prețul de vânzare)
-  listPrice     Float?  // preț de listă (prețul inițial, fără reducere)
-  purchasePrice Float?  // preț de achiziție (preț intrare)
-  modAmbalare   String? // mod de ambalare (ex: buc, set, palet)
-  modAmbalareEn String? // mod de ambalare - traducere engleză
-  descriere     String? // descriere variantă
-  descriereEn   String? // descriere variantă - traducere engleză
-  specsExtra    Json?   // specificații suplimentare în format JSON
-  active        Boolean @default(true)
-  onDemand      Boolean @default(false) // variantă disponibilă doar pe comandă
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  product       Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  id               Int      @id @default(autoincrement())
+  productId        Int
+  code             String
+  marime           String?
+  marimeEn         String?
+  distantaSesizare String?
+  tipIesire        String?
+  tipContact       String?
+  tensiune         String?
+  curent           String?
+  protectie        String?
+  material         String?
+  cablu            String?
+  compatibil       String?
+  compatibilEn     String?
+  greutate         Float?
+  stoc             Int      @default(0)
+  pret             Float?
+  listPrice        Float?
+  purchasePrice    Float?
+  currency         String   @default("RON")
+  modAmbalare      String?
+  modAmbalareEn    String?
+  descriere        String?
+  descriereEn      String?
+  specsExtra       Json?
+  active           Boolean  @default(true)
+  onDemand         Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  product          Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
 
 model User {
@@ -97,38 +91,40 @@ model User {
 }
 
 model Order {
-  id        Int      @id @default(autoincrement())
-  number    String?
-  date      DateTime @default(now())
-  total     Float
-  user      User?    @relation(fields: [userId], references: [id])
-  userId    Int?
-  items     Json
-  clientData Json?
-  product   Product? @relation(fields: [productId], references: [id])
-  productId Int?
-  invoiceUrl String?
-  courierCost   Float?
-  courierType   String?
-  tva           Float?
-  subtotalPretVanzare   Float?
-  subtotalDupaReduceri  Float?
-  reducereTotala        Float?
-  deliveryType  String?
-  deliveryLabel String?
-  status      String   @default("pending")
-  source      String?
-  statusUpdatedAt DateTime? @default(now())
-  paymentMethod String?
-  awb         String?
-  courierName String?
+  id                   Int       @id @default(autoincrement())
+  number               String?
+  date                 DateTime  @default(now())
+  total                Float
+  userId               Int?
+  items                Json
+  clientData           Json?
+  productId            Int?
+  invoiceUrl           String?
+  courierCost          Float?
+  courierType          String?
+  tva                  Float?
+  subtotalPretVanzare  Float?
+  subtotalDupaReduceri Float?
+  reducereTotala       Float?
+  deliveryType         String?
+  deliveryLabel        String?
+  status               String    @default("awaiting_price")
+  source               String?
+  statusUpdatedAt      DateTime? @default(now())
+  paymentMethod        String?
+  awb                  String?
+  courierName          String?
+  priceConfirmToken    String?
+  priceConfirmExpiry   DateTime?
+  priceConfirmedAt     DateTime?
+  product              Product?  @relation(fields: [productId], references: [id])
+  user                 User?     @relation(fields: [userId], references: [id])
 }
 
-
 model Wishlist {
-  id     Int    @id @default(autoincrement())
-  email  String @unique
-  items  Json   // [{id, name, image}]
+  id    Int    @id @default(autoincrement())
+  email String @unique
+  items Json
 }
 
 model Newsletter {
@@ -137,102 +133,492 @@ model Newsletter {
   name         String?
   subscribedAt DateTime @default(now())
   active       Boolean  @default(true)
-  source       String?  // de unde s-a abonat: footer, popup, checkout
+  source       String?
 }
 
 model PushSubscription {
-  id           Int      @id @default(autoincrement())
-  endpoint     String   @unique
-  p256dh       String   // cheie publică
-  auth         String   // secret
-  createdAt    DateTime @default(now())
-  userAgent    String?  // browser info
-  isAdmin      Boolean  @default(true) // doar admin primeste notificări
+  id        Int      @id @default(autoincrement())
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+  userAgent String?
+  isAdmin   Boolean  @default(true)
 }
 
 model AdminLog {
-  id          Int      @id @default(autoincrement())
-  action      String   // CREATE, UPDATE, DELETE, LOGIN, etc.
-  entity      String   // produs, comanda, user, etc.
-  entityId    Int?     // id-ul entității afectate
-  details     Json?    // detalii suplimentare (ce s-a modificat)
-  adminEmail  String   // cine a făcut acțiunea
-  createdAt   DateTime @default(now())
+  id         Int      @id @default(autoincrement())
+  action     String
+  entity     String
+  entityId   Int?
+  details    Json?
+  adminEmail String
+  createdAt  DateTime @default(now())
 }
 
 model Review {
-  id          Int      @id @default(autoincrement())
-  productId   Int
-  userName    String
-  rating      Int      // 1-5 stele
-  text        String
-  textEn      String?  // traducere în engleză
-  approved    Boolean  @default(false) // moderare
-  createdAt   DateTime @default(now())
+  id        Int      @id @default(autoincrement())
+  productId Int
+  userName  String
+  rating    Int
+  text      String
+  textEn    String?
+  approved  Boolean  @default(false)
+  createdAt DateTime @default(now())
 }
 
 model Invoice {
-  id          Int      @id @default(autoincrement())
-  series      String   // ex: "FG"
-  number      Int      // număr secvențial
-  orderId     Int      @unique
-  createdAt   DateTime @default(now())
+  id         Int      @id @default(autoincrement())
+  series     String
+  number     Int
+  orderId    Int
+  type       String   @default("NORMAL")
+  stornoOfId Int?
+  createdAt  DateTime @default(now())
 }
 
 model SiteSettings {
-  id              Int      @id @default(autoincrement())
-  key             String   @unique
-  value           String
-  updatedAt       DateTime @default(now())
+  id        Int      @id @default(autoincrement())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @default(now())
 }
 
 model BlogPost {
-  id          Int      @id @default(autoincrement())
-  title       String
-  slug        String   @unique
-  content     String   // HTML content
-  excerpt     String?  // rezumat pentru listare
-  image       String?  // imagine featured
-  author      String?
-  category    String?  // categoria articolului
-  tags        Json?    // array de taguri pentru SEO
-  published   Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @default(now())
+  id        Int      @id @default(autoincrement())
+  title     String
+  slug      String   @unique
+  content   String
+  excerpt   String?
+  image     String?
+  author    String?
+  category  String?
+  tags      Json?
+  published Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
 }
 
 model AbandonedCart {
-  id          Int      @id @default(autoincrement())
+  id          Int       @id @default(autoincrement())
   email       String
   phone       String?
-  items       Json     // produsele din coș
+  items       Json
   total       Float
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @default(now())
-  emailSent   Boolean  @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @default(now())
+  emailSent   Boolean   @default(false)
   emailSentAt DateTime?
-  recovered   Boolean  @default(false) // dacă a finalizat comanda
+  recovered   Boolean   @default(false)
 }
 
 model AdminSession {
-  id            Int      @id @default(autoincrement())
-  adminId       String   // email sau identificator admin
-  token         String   @unique // JWT token
-  createdAt     DateTime @default(now())
-  expiresAt     DateTime // când expiră sesiunea
-  ipAddress     String?  // IP-ul de la care s-a autentificat
-  userAgent     String?  // browser info
+  id        Int      @id @default(autoincrement())
+  adminId   String
+  token     String   @unique
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
 }
 
 model AuditLog {
+  id         Int      @id @default(autoincrement())
+  adminId    String
+  action     String
+  resource   String
+  resourceId String?
+  details    String?
+  ipAddress  String
+  userAgent  String?
+  success    Boolean
+  timestamp  DateTime @default(now())
+}
+
+model PriceHistory {
+  id           Int      @id @default(autoincrement())
+  productId    Int
+  variantId    Int?
+  oldPrice     Float
+  newPrice     Float
+  oldListPrice Float?
+  newListPrice Float?
+  changedBy    String
+  createdAt    DateTime @default(now())
+}
+
+model StockNotification {
+  id        Int      @id @default(autoincrement())
+  email     String
+  productId Int
+  variantId Int?
+  notified  Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model Coupon {
+  id        Int      @id @default(autoincrement())
+  code      String   @unique
+  type      String
+  value     Float
+  validFrom DateTime
+  validTo   DateTime
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Faq {
+  id         Int      @id @default(autoincrement())
+  question   String
+  questionEn String?
+  answer     String
+  answerEn   String?
+  category   String?
+  sortOrder  Int      @default(0)
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+}
+
+model ProductQuestion {
+  id         Int       @id @default(autoincrement())
+  productId  Int
+  userName   String
+  email      String?
+  question   String
+  answer     String?
+  answeredBy String?
+  answeredAt DateTime?
+  approved   Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+}
+
+model LoyaltyPoints {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  points    Int      @default(0)
+  reason    String
+  orderId   Int?
+  createdAt DateTime @default(now())
+}
+
+model Supplier {
+  id                Int               @id @default(autoincrement())
+  name              String
+  contactPerson     String?
+  email             String?
+  phone             String?
+  website           String?
+  cui               String?
+  address           String?
+  notes             String?
+  rating            Int?
+  active            Boolean           @default(true)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @default(now())
+  dropshipping      Int?              @default(0)
+  apiType           String?
+  apiEndpoint       String?
+  apiKey            String?
+  apiSecret         String?
+  apiHeaders        String?
+  orderEndpoint     String?
+  stockEndpoint     String?
+  trackingEndpoint  String?
+  autoForwardOrders Int?              @default(0)
+  autoSyncStock     Int?              @default(0)
+  stockSyncInterval Int?
+  lastStockSync     String?
+  markupPercent     Float?
+  markupFixed       Float?
+  minOrderValue     Float?
+  shippingCost      Float?
+  purchaseOrders    PurchaseOrder[]
+  products          SupplierProduct[]
+}
+
+model SupplierProduct {
   id            Int      @id @default(autoincrement())
-  adminId       String   // cine a efectuat acțiunea
-  action        String   // login, logout, create, update, delete, login_failed
-  resource      String   // users, products, orders, admin_auth, etc.
-  resourceId    String?  // ID-ul resursei afectate
-  details       String?  // detalii suplimentare
-  ipAddress     String   // IP-ul clientului
-  userAgent     String?  // browser info
-  success       Boolean  // dacă acțiunea a reușit
-  timestamp     DateTime @default(now())
+  supplierId    Int
+  productId     Int
+  supplierCode  String?
+  supplierPrice Float
+  currency      String   @default("EUR")
+  minQuantity   Int      @default(1)
+  deliveryDays  Int?
+  lastUpdated   DateTime @default(now())
+  supplier      Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+}
+
+model PurchaseOrder {
+  id          Int       @id @default(autoincrement())
+  supplierId  Int
+  status      String    @default("draft")
+  items       Json
+  totalAmount Float
+  notes       String?
+  generatedBy String    @default("ai")
+  sentAt      DateTime?
+  receivedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @default(now())
+  supplier    Supplier  @relation(fields: [supplierId], references: [id])
+}
+
+model AIPromotion {
+  id             Int       @id @default(autoincrement())
+  type           String
+  title          String
+  content        String
+  targetProducts Json?
+  status         String    @default("draft")
+  scheduledFor   DateTime?
+  sentAt         DateTime?
+  createdAt      DateTime  @default(now())
+}
+
+model QuoteRequest {
+  id          Int       @id @default(autoincrement())
+  email       String
+  phone       String?
+  company     String?
+  name        String?
+  products    Json
+  message     String?
+  status      String    @default("pending")
+  respondedAt DateTime?
+  respondedBy String?
+  quotedPrice Float?
+  notes       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @default(now())
+}
+
+model ReturnRequest {
+  id           Int       @id @default(autoincrement())
+  orderId      Int
+  email        String
+  phone        String?
+  reason       String
+  description  String
+  photos       Json?
+  status       String    @default("pending")
+  resolution   String?
+  refundAmount Float?
+  processedAt  DateTime?
+  processedBy  String?
+  courierAwb   String?
+  notes        String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @default(now())
+}
+
+model WarrantyCertificate {
+  id             Int       @id @default(autoincrement())
+  orderId        Int
+  productId      Int
+  productName    String
+  serialNumber   String?
+  warrantyMonths Int       @default(24)
+  startDate      DateTime
+  endDate        DateTime
+  pdfUrl         String?
+  sentAt         DateTime?
+  createdAt      DateTime  @default(now())
+}
+
+model DropshipProduct {
+  id            Int             @id @default(autoincrement())
+  productId     Int?
+  supplierId    Int
+  name          String
+  supplierCode  String?
+  supplierPrice Float
+  currency      String          @default("EUR")
+  yourPrice     Float
+  marginPercent Float?
+  category      String?
+  description   String?
+  image         String?
+  stock         String          @default("unknown")
+  stockQuantity Int?
+  deliveryDays  Int             @default(7)
+  status        String          @default("active")
+  autoSync      Boolean         @default(true)
+  lastSyncAt    DateTime?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  orders        DropshipOrder[]
+}
+
+model DropshipOrder {
+  id                Int             @id @default(autoincrement())
+  orderId           Int
+  dropshipProductId Int
+  supplierId        Int
+  quantity          Int
+  supplierOrderId   String?
+  supplierAwb       String?
+  courierName       String?
+  status            String          @default("pending")
+  supplierPrice     Float
+  clientPrice       Float
+  profit            Float?
+  orderedAt         DateTime?
+  shippedAt         DateTime?
+  deliveredAt       DateTime?
+  trackingUrl       String?
+  notes             String?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  product           DropshipProduct @relation(fields: [dropshipProductId], references: [id])
+}
+
+model DropshipSyncLog {
+  id              Int       @id @default(autoincrement())
+  supplierId      Int
+  syncType        String
+  productsUpdated Int       @default(0)
+  priceChanges    Int       @default(0)
+  stockChanges    Int       @default(0)
+  errors          Json?
+  status          String    @default("completed")
+  startedAt       DateTime  @default(now())
+  completedAt     DateTime?
+  duration        Int?
+}
+
+model DropshipAlert {
+  id         Int       @id @default(autoincrement())
+  type       String
+  productId  Int?
+  supplierId Int?
+  message    String
+  details    Json?
+  severity   String    @default("warning")
+  resolved   Boolean   @default(false)
+  resolvedAt DateTime?
+  createdAt  DateTime  @default(now())
+}
+
+model DropshipSettings {
+  id                   Int      @id @default(autoincrement())
+  supplierId           Int      @unique
+  defaultMarginPercent Float    @default(25)
+  minMarginPercent     Float    @default(10)
+  autoUpdatePrices     Boolean  @default(true)
+  autoOrderEnabled     Boolean  @default(false)
+  syncIntervalHours    Int      @default(24)
+  lowStockThreshold    Int      @default(5)
+  emailNotifications   Boolean  @default(true)
+  apiUrl               String?
+  apiKey               String?
+  updatedAt            DateTime @updatedAt
+}
+
+// ==========================================
+// PLC CONFIGURATOR MODELS
+// ==========================================
+
+// Brand-uri de PLC (Unitronics, Delta, Siemens etc.)
+model ConfiguratorBrand {
+  id          Int                    @id @default(autoincrement())
+  name        String                 @unique
+  logo        String?
+  description String?
+  active      Boolean                @default(true)
+  sortOrder   Int                    @default(0)
+  products    ConfiguratorProduct[]
+}
+
+// Produs configurabil (CPU de bază)
+model ConfiguratorProduct {
+  id            Int                      @id @default(autoincrement())
+  brandId       Int
+  name          String
+  sku           String                   @unique
+  description   String?
+  image         String?
+  basePrice     Float
+  currency      String                   @default("EUR")
+  productId     Int?                     // Legătură la Product din catalog
+  active        Boolean                  @default(true)
+  sortOrder     Int                      @default(0)
+  createdAt     DateTime                 @default(now())
+  brand         ConfiguratorBrand        @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  options       ConfiguratorProductOption[]
+}
+
+// Categorii de opțiuni (PLC, HMI, Communication, I/O)
+model ConfiguratorCategory {
+  id          Int                   @id @default(autoincrement())
+  name        String                // PLC, HMI, Communication, I/O
+  nameEn      String?
+  icon        String?               // Icon pentru tab
+  description String?
+  sortOrder   Int                   @default(0)
+  options     ConfiguratorOption[]
+}
+
+// Opțiuni individuale per categorie
+model ConfiguratorOption {
+  id           Int                        @id @default(autoincrement())
+  categoryId   Int
+  name         String
+  nameEn       String?
+  description  String?
+  sku          String?
+  price        Float                      @default(0)
+  currency     String                     @default("EUR")
+  image        String?
+  productId    Int?                       // Legătură la Product din catalog
+  specs        Json?                      // Specificații tehnice
+  active       Boolean                    @default(true)
+  sortOrder    Int                        @default(0)
+  category     ConfiguratorCategory       @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  products     ConfiguratorProductOption[]
+  compatWith   ConfiguratorCompatibility[] @relation("OptionCompatibility")
+  incompatWith ConfiguratorCompatibility[] @relation("IncompatibleWith")
+}
+
+// Relație many-to-many: ce opțiuni are fiecare produs configurabil
+model ConfiguratorProductOption {
+  id           Int                 @id @default(autoincrement())
+  productId    Int
+  optionId     Int
+  isDefault    Boolean             @default(false)  // Opțiune inclusă în preț bază
+  isRequired   Boolean             @default(false)  // Obligatoriu să aleagă
+  maxQuantity  Int                 @default(1)      // Câte poate adăuga
+  priceOverride Float?                              // Preț diferit pentru acest produs
+  product      ConfiguratorProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  option       ConfiguratorOption  @relation(fields: [optionId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, optionId])
+}
+
+// Reguli de compatibilitate între opțiuni
+model ConfiguratorCompatibility {
+  id            Int                @id @default(autoincrement())
+  optionId      Int                // Opțiunea sursă
+  compatibleId  Int                // Opțiune compatibilă/incompatibilă
+  isCompatible  Boolean            @default(true)   // true = compatibil, false = incompatibil
+  message       String?            // Mesaj pentru user
+  option        ConfiguratorOption @relation("OptionCompatibility", fields: [optionId], references: [id], onDelete: Cascade)
+  compatible    ConfiguratorOption @relation("IncompatibleWith", fields: [compatibleId], references: [id], onDelete: Cascade)
+
+  @@unique([optionId, compatibleId])
+}
+
+// Configurații salvate de utilizatori
+model SavedConfiguration {
+  id          Int      @id @default(autoincrement())
+  userId      Int?
+  sessionId   String?  // Pentru utilizatori nelogați
+  productId   Int      // ConfiguratorProduct
+  name        String?
+  options     Json     // Array de opțiuni selectate
+  totalPrice  Float
+  currency    String   @default("EUR")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }

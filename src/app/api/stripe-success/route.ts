@@ -3,7 +3,7 @@ import { sendEmail } from "@/app/utils/email";
 import { generateOrderConfirmationPdfBuffer } from "@/app/utils/orderConfirmationPdfLib";
 import { prisma } from "@/lib/prisma";
 import { calculateCartSummary, CartSummaryProduct } from "@/app/utils/cartSummary";
-import { getTvaPercent } from "@/lib/getTvaPercent";
+import { getCartSettings, getTvaPercent } from "@/lib/getTvaPercent";
 import { notifyNewOrder } from "@/lib/push-notifications";
 import Stripe from "stripe";
 import { COMPANY_CONFIG } from "@/lib/companyConfig";
@@ -15,6 +15,9 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     console.log('[STRIPE-SUCCESS] Payload primit:', body);
     let { items, client, userEmail, courierCost, deliveryType, paymentMethod, manualOrderId, language, sessionId } = body;
+    
+    // Citește setările de coș din admin
+    const cartSettings = await getCartSettings();
     
     // Fallback: if items/client are empty but sessionId exists, fetch from Stripe metadata
     if (sessionId && (!items || items.length === 0 || !client || Object.keys(client).length === 0)) {
@@ -52,22 +55,22 @@ export async function POST(req: NextRequest) {
             
             const product = await prisma.product.findUnique({ 
               where: { id: productId },
-              include: { variants: true }
+              include: { productVariants: true }
             });
             
             if (product) {
-              const variant = variantId ? product.variants.find((v: any) => v.id === variantId) : null;
+              const variant = variantId ? product.productVariants.find((v: any) => v.id === variantId) : null;
               reconstructedItems.push({
                 id: product.id,
-                name: product.name || product.denumire,
+                name: product.name || (product as any).denumire,
                 nameEn: product.nameEn,
                 price: price,
                 discountedPrice: price,
                 quantity: qty,
                 variantId: variant?.id || null,
-                variantCode: variant?.codVarianta || null,
-                variantInfo: variant?.info || null,
-                deliveryTime: variant?.deliveryTime || product.deliveryTime || null,
+                variantCode: variant?.code || null,
+                variantInfo: variant?.descriere || null,
+                deliveryTime: (variant as any)?.deliveryTime || product.deliveryTime || null,
                 productDiscount: 0,
                 couponDiscount: 0
               });
@@ -188,7 +191,15 @@ export async function POST(req: NextRequest) {
         productDiscountValue: item.productDiscount || null,
         couponDiscountValue: item.couponDiscount || null
       }));
-      const summary = calculateCartSummary({ products: productsRaw });
+      const summary = calculateCartSummary({
+        products: productsRaw,
+        deliveryType,
+        TVA_PERCENT: cartSettings.tva,
+        livrareGratuita: cartSettings.livrareGratuita,
+        costCurierStandard: cartSettings.costCurierStandard,
+        costCurierExpress: cartSettings.costCurierExpress,
+        costPerKg: cartSettings.costPerKg,
+      });
       
       // Verifică dacă există cupoane
       const hasCoupon = productsRaw.some(item => item.appliedCoupon);
@@ -488,7 +499,15 @@ export async function POST(req: NextRequest) {
       productDiscountValue: item.productDiscount || null,
       couponDiscountValue: item.couponDiscount || null
     }));
-    const summary = calculateCartSummary({ products: productsRaw });
+    const summary = calculateCartSummary({
+      products: productsRaw,
+      deliveryType,
+      TVA_PERCENT: cartSettings.tva,
+      livrareGratuita: cartSettings.livrareGratuita,
+      costCurierStandard: cartSettings.costCurierStandard,
+      costCurierExpress: cartSettings.costCurierExpress,
+      costPerKg: cartSettings.costPerKg,
+    });
     
     // Verifică dacă există cupoane
     const hasCouponOnline = productsRaw.some(item => item.appliedCoupon || (typeof (item as any).couponDiscountValue === 'number' && (item as any).couponDiscountValue > 0));

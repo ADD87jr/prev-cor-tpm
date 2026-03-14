@@ -1,0 +1,44 @@
+[
+  {
+    "id": 1,
+    "key": "site_pages",
+    "value": "{\"acasa\":{\"titlu\":\"Bine ați venit la PREV-COR TPM\",\"subtitlu\":\"Soluții Inteligente de Automatizare Industriala\",\"descriere\":\"Oferim servicii profesionale de proiectare, instalare și mentenanță pentru sisteme electrice și automatizări.\"},\"despre\":{\"titlu\":\"Despre Noi\",\"descriere\":\"PREV-COR TPM este o companie specializată în domeniul instalațiilor electrice și automatizărilor industriale.\",\"experienta\":\"15+ ani experiență\",\"proiecte\":\"500+ proiecte finalizate\",\"clienti\":\"200+ clienți mulțumiți\"},\"servicii\":{\"titlu\":\"Serviciile Noastre\",\"descriere\":\"Oferim o gamă completă de servicii în domeniul electric și automatizări.\",\"lista\":[{\"nume\":\"Instalații electrice\",\"descriere\":\"Proiectare și execuție instalații electrice industriale și rezidențiale\"},{\"nume\":\"Automatizări industriale\",\"descriere\":\"Sisteme de automatizare pentru procese industriale\"},{\"nume\":\"Mentenanță\",\"descriere\":\"Servicii de mentenanță preventivă și corectivă\"},{\"nume\":\"Tablouri electrice\",\"descriere\":\"Proiectare și asamblare tablouri electrice\"}]},\"magazin\":{\"titlu\":\"Magazin Online\",\"descriere\":\"Echipamente electrice și componente de calitate pentru proiectele dumneavoastră.\",\"banner\":\"Livrare rapidă în toată țara!\"},\"contact\":{\"titlu\":\"Informații de Contact\",\"telefon\":\"0732 935 353\",\"email\":\"office@prevcortpm.ro\",\"adresa\":\"Strada Principala, nr.70, Stroesti, Mehedinti, România\",\"codPostal\":\"227208\",\"program\":\"Luni - Vineri: 08:00 - 17:00\"},\"cos\":{\"tva\":21,\"moneda\":\"RON\",\"livrareGratuita\":500,\"textLivrare\":\"Livrare gratuită pentru comenzi peste 500 RON\",\"termenLivrare\":\"2-5 zile lucrătoare\"}}",
+    "updatedAt": "2026-02-11T17:51:29.838+00:00"
+  },
+  {
+    "id": 2,
+    "key": "maintenanceMode",
+    "value": "true",
+    "updatedAt": "2026-02-11T20:07:07.557+00:00"
+  },
+  {
+    "id": 17,
+    "key": "eur_to_ron_rate",
+    "value": "5.0941",
+    "updatedAt": "2026-03-04T17:41:35.845+00:00"
+  },
+  {
+    "id": 18,
+    "key": "eur_to_ron_date",
+    "value": "2026-03-06",
+    "updatedAt": "2026-03-04T17:41:36.024+00:00"
+  },
+  {
+    "id": 21,
+    "key": "product_domains",
+    "value": "[{\"id\":1,\"name\":\"Automatizari industriale\"},{\"id\":2,\"name\":\"Industrial\"},{\"id\":3,\"name\":\"Altele\"},{\"id\":4,\"name\":\"HVAC\"},{\"id\":5,\"name\":\"Automatizări clădiri\"}]",
+    "updatedAt": "2026-03-07T23:04:53.137Z"
+  },
+  {
+    "id": 22,
+    "key": "product_manufacturers",
+    "value": "[{\"id\":1,\"name\":\"Siemens\",\"subcategories\":[]},{\"id\":2,\"name\":\"MLC Power Automation\",\"subcategories\":[]},{\"id\":3,\"name\":\"Sauter Building Control International\",\"subcategories\":[]},{\"id\":4,\"name\":\"Transfer Multisort Elektronik\",\"subcategories\":[]}]",
+    "updatedAt": "2026-03-07T23:04:53.137Z"
+  },
+  {
+    "id": 26,
+    "key": "product_types",
+    "value": "[{\"id\":1,\"name\":\"Automation Station\",\"domainId\":5,\"subcategories\":[]},{\"id\":2,\"name\":\"Controller compact\",\"domainId\":5,\"subcategories\":[]},{\"id\":3,\"name\":\"Controller automatizare clădiri\",\"domainId\":5,\"subcategories\":[]},{\"id\":4,\"name\":\"Controller cameră\",\"domainId\":5,\"subcategories\":[]},{\"id\":5,\"name\":\"Modul I/O\",\"domainId\":5,\"subcategories\":[]},{\"id\":6,\"name\":\"Termostat cameră\",\"domainId\":5,\"subcategories\":[]},{\"id\":7,\"name\":\"Senzor temperatură\",\"domainId\":5,\"subcategories\":[]},{\"id\":8,\"name\":\"Senzor calitate aer\",\"domainId\":5,\"subcategories\":[]},{\"id\":9,\"name\":\"Senzor umiditate\",\"domainId\":5,\"subcategories\":[]},{\"id\":10,\"name\":\"Senzor presiune\",\"domainId\":5,\"subcategories\":[]},{\"id\":11,\"name\":\"Panou operare\",\"domainId\":5,\"subcategories\":[]},{\"id\":12,\"name\":\"Senzor debit\",\"domainId\":5,\"subcategories\":[]},{\"id\":13,\"name\":\"Touch Panel BACnet\",\"domainId\":5,\"subcategories\":[]},{\"id\":14,\"name\":\"Accesoriu montaj\",\"domainId\":5,\"subcategories\":[]},{\"id\":15,\"name\":\"Accesoriu\",\"domainId\":5,\"subcategories\":[]},{\"id\":16,\"name\":\"Licență software\",\"domainId\":5,\"subcategories\":[]},{\"id\":17,\"name\":\"VAV Damper\",\"domainId\":5,\"subcategories\":[]},{\"id\":18,\"name\":\"Edge Controller\",\"domainId\":5,\"subcategories\":[]},{\"id\":19,\"name\":\"PL-IO Fancoil\",\"domainId\":5,\"subcategories\":[]},{\"id\":20,\"name\":\"Monitor cameră\",\"domainId\":5,\"subcategories\":[]},{\"id\":21,\"name\":\"Web Server BACnet\",\"domainId\":5,\"subcategories\":[]},{\"id\":22,\"name\":\"Automatizări\",\"domainId\":5,\"subcategories\":[]},{\"id\":23,\"name\":\"Actuatoare\",\"domainId\":1,\"subcategories\":[]},{\"id\":24,\"name\":\"Butoane urgență\",\"domainId\":1,\"subcategories\":[]},{\"id\":25,\"name\":\"Senzori Industriali\",\"domainId\":1,\"subcategories\":[]},{\"id\":26,\"name\":\"Senzori capacitivi\",\"domainId\":1,\"subcategories\":[]},{\"id\":27,\"name\":\"Senzori fotoelectrici\",\"domainId\":1,\"subcategories\":[]},{\"id\":28,\"name\":\"Senzori inductivi\",\"domainId\":1,\"subcategories\":[]},{\"id\":29,\"name\":\"Spare Parts\",\"domainId\":1,\"subcategories\":[]},{\"id\":30,\"name\":\"Controller universal HVAC\",\"subcategories\":[]},{\"id\":31,\"name\":\"Controller Fancoil\",\"subcategories\":[]},{\"id\":32,\"name\":\"Controller cascadă\",\"subcategories\":[]},{\"id\":33,\"name\":\"Controller temperatură\",\"subcategories\":[]},{\"id\":34,\"name\":\"Controller încălzire\",\"subcategories\":[]},{\"id\":35,\"name\":\"Controller hotă\",\"subcategories\":[]},{\"id\":36,\"name\":\"Modul extensie\",\"subcategories\":[]},{\"id\":37,\"name\":\"Modul extensie I/O\",\"subcategories\":[]},{\"id\":38,\"name\":\"Interfață comunicație\",\"subcategories\":[]},{\"id\":39,\"name\":\"Gateway comunicație\",\"subcategories\":[]},{\"id\":40,\"name\":\"Touch Panel TCP/IP\",\"subcategories\":[]},{\"id\":41,\"name\":\"Display universal\",\"subcategories\":[]},{\"id\":42,\"name\":\"Unitate centrală control\",\"subcategories\":[]},{\"id\":43,\"name\":\"Dispozitiv monitorizare\",\"subcategories\":[]},{\"id\":44,\"name\":\"Indicator presiune cameră\",\"subcategories\":[]},{\"id\":45,\"name\":\"Monitor condiții cameră\",\"subcategories\":[]},{\"id\":46,\"name\":\"Regulator VAV\",\"subcategories\":[]},{\"id\":47,\"name\":\"Convertor semnal\",\"subcategories\":[]},{\"id\":48,\"name\":\"Transformator\",\"subcategories\":[]},{\"id\":49,\"name\":\"Servomotor\",\"subcategories\":[]},{\"id\":50,\"name\":\"Cadru montaj\",\"subcategories\":[]},{\"id\":51,\"name\":\"Echipament automatizare\",\"subcategories\":[]}]",
+    "updatedAt": "2026-03-08T15:46:47.343Z"
+  }
+]

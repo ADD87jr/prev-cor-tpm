@@ -1,5 +1,49 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## 🔒 Backup și Restaurare Baza de Date
+
+### Backup Manual
+Pentru a crea un backup complet al bazei de date (include toate tabelele în format JSON + copie SQLite):
+
+```bash
+npm run db:backup
+```
+
+Backup-urile sunt salvate în `backups/` cu timestamp. Se păstrează automat ultimele 10 backup-uri.
+
+### Backup Automat
+- **La fiecare build** (`npm run build`) se creează automat un backup
+- Pentru backup zilnic programat, rulează o singură dată: `.\setup_backup_task.ps1`
+
+### Restaurare Date
+Pentru a restaura datele din cel mai recent backup:
+
+```bash
+npm run db:restore
+```
+
+Sau din un backup specific:
+```bash
+node scripts/restore-database.js backups/json-backup-2026-03-01T10-28-32
+```
+
+### Sincronizare Furnizori (Turso ↔ SQLite local)
+Pentru a sincroniza furnizorii între producție (Turso) și local (SQLite):
+
+```bash
+# Turso → SQLite local (implicit)
+node scripts/sync-suppliers.js
+
+# SQLite local → Turso
+node scripts/sync-suppliers.js --to-turso
+
+# Previzualizare fără a salva
+node scripts/sync-suppliers.js --dry-run
+```
+
+**Important:** Rulează sincronizarea după fiecare restaurare sau când ai nevoie să aliniezi datele între local și producție.
+
+---
 
 ## Populare rapidă a bazei de date (seed)
 

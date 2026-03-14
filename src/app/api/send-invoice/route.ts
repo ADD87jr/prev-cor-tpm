@@ -1,160 +1,135 @@
 import { NextResponse } from "next/server";
-import nodemailer from "nodemailer";
-
-import PDFDocument from "pdfkit";
+import { sendEmail } from "@/app/utils/email";
+import { prisma } from "@/lib/prisma";
+import { generateInvoicePdfBuffer } from "@/app/utils/invoicePdfLib";
+import { COMPANY_CONFIG } from "@/lib/companyConfig";
+import { getCartSettings } from "@/lib/getTvaPercent";
 import fs from "fs";
 import path from "path";
-import { calculateCartSummary, CartSummaryProduct } from "@/app/utils/cartSummary";
-import { getTvaPercent } from "@/lib/getTvaPercent";
 
 export async function POST(req: Request) {
   const { order } = await req.json();
   if (!order) return NextResponse.json({ error: "Order missing" }, { status: 400 });
 
-  // Folosește doar fonturile Roboto
-  const fontPath = path.join(process.cwd(), "public", "fonts", "Roboto-Regular.ttf");
-  const fontBoldPath = path.join(process.cwd(), "public", "fonts", "Roboto-Bold.ttf");
-  const doc = new PDFDocument({ margin: 40, autoFirstPage: false });
-  doc.registerFont("Roboto", fontPath);
-  doc.registerFont("Roboto-Bold", fontBoldPath);
-  doc.font("Roboto");
-  doc.addPage({ margin: 40 });
-  let buffers: Uint8Array[] = [];
-  doc.on("data", (d: Uint8Array) => buffers.push(d));
-
-  // Logo (dacă există)
-  const logoPath = path.join(process.cwd(), "public", "logo.png");
-  if (fs.existsSync(logoPath)) {
-    doc.image(logoPath, doc.x, doc.y, { width: 80 });
-    doc.moveDown(2);
+  // Generează număr factură secvențial
+  const orderId = order.orderId || order.id;
+  
+  // Verifică dacă există deja factură NORMALĂ pentru această comandă
+  const existingInvoice = await prisma.invoice.findFirst({ where: { orderId, type: 'NORMAL' } });
+  
+  let invoiceNumberStr: string;
+  
+  if (existingInvoice) {
+    // Folosește factura existentă
+    invoiceNumberStr = `PCT-${String(existingInvoice.number).padStart(4, '0')}`;
+  } else {
+    // Creează factură nouă
+    const lastInvoice = await prisma.invoice.findFirst({
+      where: { series: 'PCT' },
+      orderBy: { number: 'desc' }
+    });
+    const invoiceNumber = (lastInvoice?.number || 0) + 1;
+    
+    await prisma.invoice.create({
+      data: {
+        series: 'PCT',
+        number: invoiceNumber,
+        orderId,
+      }
+    });
+    invoiceNumberStr = `PCT-${String(invoiceNumber).padStart(4, '0')}`;
   }
 
-  // Date firmă
-  doc.fontSize(16).font("Roboto-Bold").text("PREV-COR TPM S.R.L.");
-  doc.fontSize(10).font("Roboto").text("CUI: RO12345678 | J12/1234/2020");
-  doc.text("Str. Exemplu nr. 1, Cluj-Napoca, România");
-  doc.text("IBAN: RO49AAAA1B31007593840000 | Banca: BCR");
-  doc.moveDown();
-
-  // Titlu și meta
-  doc.fontSize(20).font("Roboto-Bold").text("FACTURĂ FISCALĂ", { align: "center" });
-  doc.moveDown();
-  doc.fontSize(12).font("Roboto").text(`Număr factură: FCT-${order.id}`);
-  doc.text(`Data: ${order.date}`);
-  doc.text(`Client: ${order.userEmail}`);
-  doc.moveDown();
-
-
-  // Folosește calculateCartSummary pentru stacking logic corect
-  const products: CartSummaryProduct[] = order.items.map((item: any) => ({
-    id: item.id,
-    name: item.name,
-    price: item.price,
-    quantity: item.quantity || item.qty || 1,
-    discount: item.discount,
-    discountType: item.discountType,
-    appliedCoupon: item.appliedCoupon || null,
-    deliveryTime: item.deliveryTime || item.deliveryTerm || '-'
+  // Pregătește datele pentru generator
+  const clientData = order.clientData || {};
+  const clientName = clientData.name || clientData.denumire || clientData.firstName || order.userEmail || 'Client';
+  const orderItems = (order.items || []).map((item: any) => ({
+    name: item.name || 'Produs',
+    price: Number(item.price) || 0,
+    qty: Number(item.quantity || item.qty) || 1,
+    um: item.um || 'buc',
   }));
-  const summary = calculateCartSummary({ products });
-  doc.fontSize(12).font("Roboto-Bold").text("Produse/Servicii:");
-  doc.moveDown(0.5);
-  const tableTop = doc.y;
-  doc.fontSize(11).font("Roboto-Bold");
-  doc.text("Denumire", 40, tableTop, { continued: true });
-  doc.text("Cant.", 180, tableTop, { continued: true });
-  doc.text("Preț vânzare", 230, tableTop, { continued: true });
-  doc.text("Reducere prod.", 310, tableTop, { continued: true });
-  doc.text("Reducere cupon", 390, tableTop, { continued: true });
-  doc.text("Preț final", 480, tableTop, { continued: true });
-  doc.text("Subtotal", 560, tableTop);
-  doc.font("Roboto");
-  doc.moveDown(0.5);
-  products.forEach((item: any) => {
-    // Prețul deja include reducerea de produs - nu aplicăm discount suplimentar
-    let priceAfterProductDiscount = item.price;
-    let productDiscount = 0;
-    
-    let couponDiscount = 0;
-    let priceAfterCoupon = priceAfterProductDiscount;
-    if (item.appliedCoupon) {
-      if (item.appliedCoupon.type === 'percent') {
-        const percent = item.appliedCoupon.value <= 1 ? item.appliedCoupon.value * 100 : item.appliedCoupon.value;
-        couponDiscount = priceAfterProductDiscount * (percent / 100);
-      } else {
-        couponDiscount = item.appliedCoupon.value;
-      }
-      priceAfterCoupon = priceAfterProductDiscount - couponDiscount;
+
+  const invoiceDate = order.date || new Date().toLocaleDateString('ro-RO');
+  const orderNum = order.number || order.orderId || order.id;
+
+  // Calculează termen scadent (configurabil din admin)
+  const cartSettings = await getCartSettings();
+  const termenZile = cartSettings.termenScadentZile || 30;
+  const invoiceDateObj = (() => {
+    if (order.date) {
+      // Parsează formatul dd.mm.yyyy sau ISO
+      const parts = order.date.split('.');
+      if (parts.length === 3) return new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]));
+      return new Date(order.date);
     }
-    if (priceAfterCoupon < 0) priceAfterCoupon = 0;
-    const subtotalFinal = priceAfterCoupon * item.quantity;
-    doc.text(item.name, 40, doc.y, { continued: true });
-    doc.text(item.quantity.toString(), 180, doc.y, { continued: true });
-    doc.text(`${item.price.toFixed(2)} lei`, 230, doc.y, { continued: true });
-    doc.text(productDiscount > 0 ? `-${productDiscount.toFixed(2)} lei` : '-', 310, doc.y, { continued: true });
-    doc.text(couponDiscount > 0 ? `-${couponDiscount.toFixed(2)} lei` : '-', 390, doc.y, { continued: true });
-    doc.text(`${priceAfterCoupon.toFixed(2)} lei`, 480, doc.y, { continued: true });
-    doc.text(`${subtotalFinal.toFixed(2)} lei`, 560, doc.y);
+    return new Date();
+  })();
+  const dueDateObj = new Date(invoiceDateObj);
+  dueDateObj.setDate(dueDateObj.getDate() + termenZile);
+  const dueDate = `${String(dueDateObj.getDate()).padStart(2, '0')}.${String(dueDateObj.getMonth() + 1).padStart(2, '0')}.${dueDateObj.getFullYear()}`;
+
+  // Generează PDF profesional
+  const pdfBuffer = await generateInvoicePdfBuffer({
+    invoiceNumber: invoiceNumberStr,
+    invoiceDate,
+    dueDate,
+    exchangeRate: 'RON',
+    orderNumber: String(orderNum),
+    clientData,
+    items: orderItems,
+    courierCost: typeof order.courierCost === 'number' ? order.courierCost : 0,
+    tvaPercent: typeof order.tva === 'number' ? order.tva : undefined,
   });
-  doc.moveDown();
-  doc.font("Roboto-Bold").text(`Subtotal preț de vânzare: ${summary.subtotal.toFixed(2)} lei`, { align: "right" });
-  doc.font("Roboto-Bold").text(`Reducere totală produse: -${summary.totalProductDiscount.toFixed(2)} lei`, { align: "right" });
-  doc.font("Roboto-Bold").text(`Reducere totală cupon: -${summary.totalCouponDiscount.toFixed(2)} lei`, { align: "right" });
-  doc.font("Roboto-Bold").text(`Subtotal după reduceri: ${summary.subtotalDupaReduceri.toFixed(2)} lei`, { align: "right" });
 
-  // Totaluri și TVA
-  const TVA_PERCENT = await getTvaPercent();
-  const tva = summary.subtotalDupaReduceri * (TVA_PERCENT / 100);
-  doc.font("Roboto-Bold").text(`TVA ${TVA_PERCENT}%: ${tva.toFixed(2)} lei`, { align: "right" });
-  doc.fontSize(14).font("Roboto-Bold").text(`Total de plată: ${(summary.subtotalDupaReduceri + tva).toFixed(2)} lei`, { align: "right" });
+  // Salvează PDF pe disc
+  const invoicesDir = path.join(process.cwd(), "public", "uploads", "invoices");
+  if (!fs.existsSync(invoicesDir)) {
+    fs.mkdirSync(invoicesDir, { recursive: true });
+  }
+  const pdfFilename = `factura-${invoiceNumberStr}.pdf`;
+  const pdfPath = path.join(invoicesDir, pdfFilename);
+  fs.writeFileSync(pdfPath, pdfBuffer);
 
-  doc.moveDown(2);
-  doc.fontSize(10).font("Roboto").text("Factura a fost generată automat și nu necesită semnătură sau ștampilă.");
-  doc.end();
-
-  const pdfBuffer = await new Promise<Buffer>((resolve) => {
-    doc.on("end", () => {
-      const buf = Buffer.concat(buffers);
-      resolve(buf);
-    });
+  // Actualizează invoiceUrl pe comandă
+  const invoiceUrl = `/api/download-invoice?file=${pdfFilename}`;
+  await prisma.order.update({
+    where: { id: orderId },
+    data: { invoiceUrl },
   });
 
   // Trimite email cu PDF atașat
-  const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST || "smtp.example.com",
-    port: Number(process.env.SMTP_PORT) || 587,
-    secure: false,
-    auth: {
-      user: process.env.SMTP_USER || "user@example.com",
-      pass: process.env.SMTP_PASS || "password"
-    }
-  });
-
-  const mailOptions = {
-    from: `Magazin PREV-COR TPM <${process.env.SMTP_USER || "user@example.com"}>`,
-    to: order.userEmail,
-    subject: `Factura pentru comanda ta #${order.id}`,
-    text: `Bună ziua!\n\nAtașat găsiți factura fiscală pentru comanda dumneavoastră plasată la PREV-COR TPM.\n\nVă mulțumim pentru încredere!`,
-    attachments: [
-      {
-        filename: `factura-${order.id}.pdf`,
-        content: pdfBuffer,
-        contentType: "application/pdf"
-      }
-    ]
-  };
-
+  const recipientEmail = clientData.email || order.userEmail;
   try {
-    await transporter.sendMail(mailOptions);
-    // Convertim Buffer la ArrayBuffer pentru compatibilitate cu Response (fără SharedArrayBuffer)
-    const ab = pdfBuffer instanceof Buffer
-      ? pdfBuffer.buffer.slice(pdfBuffer.byteOffset, pdfBuffer.byteOffset + pdfBuffer.byteLength)
-      : pdfBuffer;
+    if (recipientEmail) {
+      await sendEmail({
+        to: recipientEmail,
+        subject: `Factura ${invoiceNumberStr} - Comanda #${orderNum}`,
+        text: `Buna ziua!\n\nAtasat gasiti factura fiscala ${invoiceNumberStr} pentru comanda #${orderNum} plasata la PREV-COR TPM.\n\nVa multumim pentru incredere!\n\nEchipa PREV-COR TPM`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px;">
+            <h2 style="color: #2563eb;">Factura ${invoiceNumberStr}</h2>
+            <p>Draga ${clientName},</p>
+            <p>Atasat gasiti factura fiscala <strong>${invoiceNumberStr}</strong> pentru comanda <strong>#${orderNum}</strong>.</p>
+            <p>Va multumim pentru incredere!</p>
+            <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+            <p style="color: #666; font-size: 12px;">Cu stima,<br>Echipa PREV-COR TPM<br><a href="mailto:${COMPANY_CONFIG.email}">${COMPANY_CONFIG.email}</a></p>
+          </div>
+        `,
+        attachments: [
+          {
+            filename: `factura-${invoiceNumberStr}.pdf`,
+            content: pdfBuffer,
+          }
+        ]
+      });
+    }
+    const ab = pdfBuffer.buffer.slice(pdfBuffer.byteOffset, pdfBuffer.byteOffset + pdfBuffer.byteLength);
     return new Response(ab as ArrayBuffer, {
       status: 200,
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename=factura-${order.id}.pdf`,
+        "Content-Disposition": `attachment; filename=factura-${invoiceNumberStr}.pdf`,
       },
     });
   } catch (err) {

@@ -149,8 +149,7 @@ export default function ContactPage() {
           <div className="flex items-center gap-3"><span className="text-2xl">✉️</span> <span className="font-medium">{txt.email}:</span> <a href={`mailto:${contactInfo.email}`} className="text-blue-600 hover:underline">{contactInfo.email}</a></div>
           <div className="flex items-center gap-3"><span className="text-2xl">🌐</span> <span className="font-medium">Website:</span> <a href="https://www.prevcortpm.ro" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">www.prevcortpm.ro</a></div>
           <div className="flex items-center gap-3"><span className="text-2xl">📘</span> <span className="font-medium">Facebook:</span> <a href="https://www.facebook.com/profile.php?id=61587323746589" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">PREV-COR TPM</a></div>
-          <div className="flex items-center gap-3"><span className="text-2xl">📍</span> <span className="font-medium">{txt.address}:</span> <span>{translateAddress(contactInfo.adresa)}</span></div>
-          <div className="flex items-center gap-3"><span className="text-2xl">🏷️</span> <span className="font-medium">{txt.postalCode}:</span> <span>{contactInfo.codPostal}</span></div>
+          <div className="flex items-center gap-3"><span className="text-2xl">📍</span> <span className="font-medium">{txt.address}:</span> <span>{translateAddress(contactInfo.adresa)}{contactInfo.codPostal ? `, ${contactInfo.codPostal}` : ""}</span></div>
           <div className="flex items-center gap-3"><span className="text-2xl">⏰</span> <span className="font-medium">{txt.schedule}:</span> <span>{translateSchedule(contactInfo.program)}</span></div>
         </div>
         {/* Formular de contact */}

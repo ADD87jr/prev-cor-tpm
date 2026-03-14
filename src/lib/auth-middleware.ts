@@ -3,8 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 
 const JWT_SECRET = new TextEncoder().encode(process.env.NEXTAUTH_SECRET || "your-super-secret-key-change-this");
 
-// Sesiunea durează 1 an și se reînnoiește automat
-const SESSION_DURATION_MS = 365 * 24 * 60 * 60 * 1000; // 1 an
+// Sesiunea durează 30 de zile
+const SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 zile
 
 export interface AdminSession {
   adminId: string;
@@ -79,5 +79,9 @@ export async function adminAuthMiddleware(req: NextRequest): Promise<NextRespons
  * OBS: Ar trebui să fie stocată hash-uită în baza de date, nu în env
  */
 export function getAdminPassword(): string {
-  return process.env.ADMIN_PASSWORD || "admin123"; // SCHIMBĂ ACEASTA!
+  const pass = process.env.ADMIN_PASSWORD;
+  if (!pass) {
+    throw new Error("ADMIN_PASSWORD environment variable is not set! Set it in .env file.");
+  }
+  return pass;
 }

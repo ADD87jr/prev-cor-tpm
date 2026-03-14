@@ -47,10 +47,26 @@ export async function POST(req: NextRequest) {
 }
 
 // DELETE - marchează coșul ca recovered când se finalizează comanda
+// Dacă are param ?id=X șterge complet din DB (admin)
+// Dacă are param ?deleteAll=true șterge toate cele recovered (admin cleanup)
 export async function DELETE(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const email = searchParams.get("email");
+    const id = searchParams.get("id");
+    const deleteAll = searchParams.get("deleteAll");
+
+    // Ștergere individuală după ID (admin)
+    if (id) {
+      await db.abandonedCart.delete({ where: { id: parseInt(id) } });
+      return NextResponse.json({ success: true });
+    }
+
+    // Ștergere toate coșurile abandonate (admin cleanup)
+    if (deleteAll === "true") {
+      const result = await db.abandonedCart.deleteMany({ where: { recovered: false } });
+      return NextResponse.json({ success: true, deleted: result.count });
+    }
     
     if (!email) {
       return NextResponse.json({ error: "Email necesar" }, { status: 400 });
@@ -64,7 +80,7 @@ export async function DELETE(req: NextRequest) {
     
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error marking cart as recovered:", error);
+    console.error("Error deleting/marking cart:", error);
     return NextResponse.json({ error: "Eroare" }, { status: 500 });
   }
 }

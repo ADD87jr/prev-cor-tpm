@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Offline - PREV-COR TPM</title>
+  <link rel="icon" href="/logo.png">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+    }
+    
+    .container {
+      text-align: center;
+      padding: 2rem;
+      max-width: 500px;
+    }
+    
+    .icon {
+      font-size: 80px;
+      margin-bottom: 1.5rem;
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.7; transform: scale(0.95); }
+    }
+    
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 1rem;
+      font-weight: 600;
+    }
+    
+    p {
+      font-size: 1.1rem;
+      opacity: 0.9;
+      margin-bottom: 2rem;
+      line-height: 1.6;
+    }
+    
+    .btn {
+      display: inline-block;
+      padding: 12px 32px;
+      background: white;
+      color: #1e3a8a;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      cursor: pointer;
+      border: none;
+      font-size: 1rem;
+    }
+    
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+    }
+    
+    .status {
+      margin-top: 2rem;
+      padding: 1rem;
+      background: rgba(255,255,255,0.1);
+      border-radius: 8px;
+      font-size: 0.9rem;
+    }
+    
+    .status-dot {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #ef4444;
+      margin-right: 8px;
+      animation: blink 1s infinite;
+    }
+    
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+    
+    .cached-pages {
+      margin-top: 2rem;
+      text-align: left;
+    }
+    
+    .cached-pages h3 {
+      font-size: 1rem;
+      margin-bottom: 0.5rem;
+      opacity: 0.8;
+    }
+    
+    .cached-pages ul {
+      list-style: none;
+      padding: 0;
+    }
+    
+    .cached-pages li {
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    .cached-pages a {
+      color: white;
+      text-decoration: none;
+      opacity: 0.9;
+    }
+    
+    .cached-pages a:hover {
+      opacity: 1;
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="icon">📡</div>
+    <h1>Ești offline</h1>
+    <p>
+      Se pare că nu ai conexiune la internet. 
+      Verifică-ți conexiunea și încearcă din nou.
+    </p>
+    
+    <button class="btn" onclick="location.reload()">
+      🔄 Încearcă din nou
+    </button>
+    
+    <div class="status">
+      <span class="status-dot"></span>
+      Conexiune indisponibilă
+    </div>
+    
+    <div class="cached-pages" id="cachedPages" style="display: none;">
+      <h3>📁 Pagini disponibile offline:</h3>
+      <ul id="pageList"></ul>
+    </div>
+  </div>
+
+  <script>
+    // Verifică când conexiunea revine
+    window.addEventListener('online', function() {
+      location.reload();
+    });
+
+    // Afișează paginile din cache
+    if ('caches' in window) {
+      caches.open('prevcor-dynamic-v2').then(function(cache) {
+        cache.keys().then(function(requests) {
+          const pageList = document.getElementById('pageList');
+          const container = document.getElementById('cachedPages');
+          
+          const pages = requests
+            .filter(req => req.url.includes(location.origin) && !req.url.includes('.'))
+            .slice(0, 5);
+          
+          if (pages.length > 0) {
+            container.style.display = 'block';
+            pages.forEach(function(req) {
+              const url = new URL(req.url);
+              const li = document.createElement('li');
+              const a = document.createElement('a');
+              a.href = url.pathname;
+              a.textContent = url.pathname === '/' ? 'Pagina principală' : url.pathname;
+              li.appendChild(a);
+              pageList.appendChild(li);
+            });
+          }
+        });
+      });
+    }
+  </script>
+</body>
+</html>

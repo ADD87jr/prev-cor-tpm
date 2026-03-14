@@ -1,0 +1,26 @@
+{
+  "timestamp": "2026-03-07T16-02-18",
+  "source": "Turso (Production)",
+  "tables": {
+    "Product": 2033,
+    "ProductVariant": 4,
+    "Order": 0,
+    "OrderItem": 0,
+    "User": 1,
+    "SiteSettings": 4,
+    "Coupon": 0,
+    "FAQ": 0,
+    "Review": 0,
+    "Newsletter": 0,
+    "AbandonedCart": 11,
+    "AuditLog": 32,
+    "PriceHistory": 0,
+    "Invoice": 0,
+    "Wishlist": 0,
+    "Supplier": 15,
+    "SupplierProduct": 0,
+    "QuoteRequest": 0,
+    "ProductQuestion": 0,
+    "LoyaltyPoints": 0
+  }
+}

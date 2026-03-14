@@ -67,6 +67,7 @@ export default function VarianteRoPage() {
     pret: "",
     listPrice: "",
     purchasePrice: "",
+    currency: "RON",
     modAmbalare: "",
     descriere: "",
     active: true,
@@ -127,6 +128,7 @@ export default function VarianteRoPage() {
       pret: variant.pret ? String(variant.pret) : "",
       listPrice: variant.listPrice ? String(variant.listPrice) : "",
       purchasePrice: variant.purchasePrice ? String(variant.purchasePrice) : "",
+      currency: (variant as any).currency || "RON",
       modAmbalare: variant.modAmbalare || "",
       descriere: variant.descriere || "",
       active: variant.active,
@@ -154,7 +156,7 @@ export default function VarianteRoPage() {
       code: "", marime: "", distantaSesizare: "", tipIesire: "", tipContact: "",
       tensiune: "", curent: "", protectie: "", material: "", cablu: "",
       compatibil: "", greutate: "", unitateGreutate: "kg" as "kg" | "g", stoc: "0",
-      pret: "", listPrice: "", purchasePrice: "", modAmbalare: "", descriere: "", active: true, onDemand: false,
+      pret: "", listPrice: "", purchasePrice: "", currency: "RON", modAmbalare: "", descriere: "", active: true, onDemand: false,
     });
   };
 
@@ -190,6 +192,7 @@ export default function VarianteRoPage() {
         pret: form.pret ? Number(form.pret) : undefined,
         listPrice: form.listPrice ? Number(form.listPrice) : undefined,
         purchasePrice: form.purchasePrice ? Number(form.purchasePrice) : undefined,
+        currency: form.currency || "RON",
         modAmbalare: form.modAmbalare || undefined,
         descriere: form.descriere || undefined,
         active: form.active,
@@ -278,11 +281,18 @@ export default function VarianteRoPage() {
                   <input name="code" type="text" required placeholder="Ex: SKU-001-A" value={form.code} onChange={handleChange} className="w-full border rounded-lg px-4 py-2 focus:outline-purple-500" />
                 </div>
                 <div>
-                  <label className="block font-semibold mb-1">Preț de listă (RON)</label>
+                  <label className="block font-semibold mb-1">Monedă</label>
+                  <select name="currency" value={form.currency} onChange={handleChange} className="w-full border rounded-lg px-4 py-2 focus:outline-purple-500 bg-purple-50 font-semibold">
+                    <option value="RON">RON</option>
+                    <option value="EUR">EUR</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1">Preț de listă ({form.currency})</label>
                   <input name="listPrice" type="number" min="0" step="0.01" placeholder="Prețul inițial/catalog" value={form.listPrice} onChange={handleChange} className="w-full border rounded-lg px-4 py-2 focus:outline-purple-500" />
                 </div>
                 <div>
-                  <label className="block font-semibold mb-1">Preț vânzare (RON)</label>
+                  <label className="block font-semibold mb-1">Preț vânzare ({form.currency})</label>
                   <input name="pret" type="number" min="0" step="0.01" placeholder="Prețul final cu discount" value={form.pret} onChange={handleChange} className="w-full border rounded-lg px-4 py-2 focus:outline-purple-500" />
                   {form.listPrice && form.pret && Number(form.listPrice) > Number(form.pret) && (
                     <p className="text-sm text-green-600 mt-1">
@@ -291,7 +301,7 @@ export default function VarianteRoPage() {
                   )}
                 </div>
                 <div>
-                  <label className="block font-semibold mb-1">Preț achiziție (RON)</label>
+                  <label className="block font-semibold mb-1">Preț achiziție ({form.currency})</label>
                   <input name="purchasePrice" type="number" min="0" step="0.01" placeholder="Preț de intrare/achiziție" value={form.purchasePrice} onChange={handleChange} className="w-full border rounded-lg px-4 py-2 focus:outline-purple-500" />
                 </div>
                 <div>
@@ -426,7 +436,7 @@ export default function VarianteRoPage() {
                         <td className="px-3 py-3">{v.distantaSesizare || '-'}</td>
                         <td className="px-3 py-3">{v.tipIesire || '-'}</td>
                         <td className="px-3 py-3">{v.tipContact || '-'}</td>
-                        <td className="px-3 py-3">{v.pret ? `${v.pret} RON` : <span className="text-gray-400 italic">produs</span>}</td>
+                        <td className="px-3 py-3">{v.pret ? `${v.pret} ${(v as any).currency || 'RON'}` : <span className="text-gray-400 italic">produs</span>}</td>
                         <td className="px-3 py-3">{v.onDemand ? <span className="text-orange-600 font-semibold">Pe comandă</span> : v.stoc}</td>
                         <td className="px-3 py-3">
                           {v.active ? (

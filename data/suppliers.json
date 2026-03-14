@@ -1,0 +1,82 @@
+[
+  {
+    "id": "sup-1",
+    "name": "Siemens Romania",
+    "email": "orders@siemens.ro",
+    "phone": "+40 21 123 4567",
+    "products": [
+      "PLC",
+      "HMI",
+      "Servo",
+      "Senzori"
+    ],
+    "ratings": {
+      "quality": 4.8,
+      "delivery": 4.5,
+      "price": 3.5,
+      "communication": 4.2
+    },
+    "metrics": {
+      "totalOrders": 45,
+      "onTimeDelivery": 92,
+      "defectRate": 0.5,
+      "avgDeliveryDays": 5
+    },
+    "notes": "Furnizor premium, prețuri mari dar calitate excelentă",
+    "createdAt": "2026-02-28T20:11:47.661Z",
+    "updatedAt": "2026-02-28T20:11:47.661Z"
+  },
+  {
+    "id": "sup-2",
+    "name": "Omron Distribution",
+    "email": "sales@omron.ro",
+    "phone": "+40 21 987 6543",
+    "products": [
+      "Senzori",
+      "Releee",
+      "Contoare",
+      "PLC"
+    ],
+    "ratings": {
+      "quality": 4.5,
+      "delivery": 4.8,
+      "price": 4,
+      "communication": 4.5
+    },
+    "metrics": {
+      "totalOrders": 62,
+      "onTimeDelivery": 98,
+      "defectRate": 0.8,
+      "avgDeliveryDays": 3
+    },
+    "notes": "Foarte rapid la livrare, stoc bun",
+    "createdAt": "2026-02-28T20:11:47.661Z",
+    "updatedAt": "2026-02-28T20:11:47.661Z"
+  },
+  {
+    "id": "sup-3",
+    "name": "ABB Partner",
+    "email": "contact@abb-partner.ro",
+    "phone": "+40 31 456 7890",
+    "products": [
+      "Invertoare",
+      "Motoare",
+      "Switchgear"
+    ],
+    "ratings": {
+      "quality": 4.7,
+      "delivery": 4,
+      "price": 3.8,
+      "communication": 4
+    },
+    "metrics": {
+      "totalOrders": 28,
+      "onTimeDelivery": 85,
+      "defectRate": 0.3,
+      "avgDeliveryDays": 7
+    },
+    "notes": "Bun pentru proiecte mari",
+    "createdAt": "2026-02-28T20:11:47.661Z",
+    "updatedAt": "2026-02-28T20:11:47.661Z"
+  }
+]

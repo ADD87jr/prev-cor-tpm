@@ -1,0 +1,195 @@
+﻿node : 
+[eval]:1
+At line:1 
+char:1
++ node -e 
+"const { P
+rismaClien
+t } = requ
+ire('@pris
+ma/client'
+); const 
+pr ...
++ ~~~~~~~~
+~~~~~~~~~~
+~~~~~~~~~~
+~~~~~~~~~~
+~~~~~~~~~~
+~~~~~~~~~~
+~~~~~~~~~~
+~
+    + Cat 
+   egory  
+  Info    
+          
+    :     
+NotS    
+pecif    
+ied:     
+([eva    
+l]:1:    
+Strin    
+g) []    
+, Rem    
+oteEx    
+cepti    
+on
+    + Ful 
+   lyQua  
+  lifie   
+ dErro    
+rId :     
+Nati    
+veCom    
+mandE    
+rror
+ 
+const { Pr
+ismaClient
+ } = requi
+re('@prism
+a/client')
+; const 
+prisma = 
+new Prisma
+Client(); 
+(async () 
+=> { 
+const 
+products 
+= await pr
+isma.produ
+ct.findMan
+y({ 
+where: { 
+OR: [{ 
+name: { 
+contains: 
+'V570' } 
+}, { 
+name: { 
+contains: 
+'S7-1200' 
+} }, { 
+name: { 
+contains: 
+'DVP' } 
+}, { sku: 
+{ 
+contains: 
+'V570' } 
+}, { sku: 
+{ 
+contains: 
+'6ES7214' 
+} }, { 
+sku: { 
+contains: 
+'DVP28' } 
+}] }, 
+select: { 
+id: true, 
+name: 
+true, 
+sku: 
+true, 
+images: 
+true } 
+}); consol
+e.log(JSON
+.stringify
+(products,
+ null, 
+2)); 
+await pris
+ma.\(); 
+})();
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+      ^
+
+SyntaxErro
+r: 
+Invalid 
+or unexpec
+ted token
+    at mak
+eContextif
+yScript (n
+ode:intern
+al/vm:185:
+14)
+    at nod
+e:internal
+/process/e
+xecution:1
+07:22
+    at [ev
+al]-wrappe
+r:6:24
+    at 
+runScript 
+(node:inte
+rnal/proce
+ss/executi
+on:101:62)
+    at eva
+lScript (n
+ode:intern
+al/process
+/execution
+:133:3)
+    at nod
+e:internal
+/main/eval
+_string:51
+:3
+
+Node.js 
+v20.19.5

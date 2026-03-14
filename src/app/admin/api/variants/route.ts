@@ -91,6 +91,9 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: "id este obligatoriu" }, { status: 400 });
     }
 
+    // Istoric preț variantă
+    const oldVariant = await prisma.productVariant.findUnique({ where: { id: Number(id) } });
+
     const variant = await prisma.productVariant.update({
       where: { id: Number(id) },
       data: {
@@ -121,6 +124,24 @@ export async function PUT(req: NextRequest) {
         onDemand: onDemand === true,
       },
     });
+
+    // Loghează modificare preț variantă
+    if (oldVariant && (
+      (pret !== undefined && Number(pret) !== oldVariant.pret) ||
+      (listPrice !== undefined && Number(listPrice) !== oldVariant.listPrice)
+    )) {
+      await prisma.priceHistory.create({
+        data: {
+          productId: oldVariant.productId,
+          variantId: Number(id),
+          oldPrice: oldVariant.pret || 0,
+          newPrice: pret ? Number(pret) : (oldVariant.pret || 0),
+          oldListPrice: oldVariant.listPrice,
+          newListPrice: listPrice ? Number(listPrice) : oldVariant.listPrice,
+          changedBy: "admin",
+        },
+      });
+    }
 
     return NextResponse.json(variant);
   } catch (error) {

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { FaPlus, FaEdit, FaTrash, FaSave, FaTimes, FaChevronDown, FaChevronRight } from 'react-icons/fa';
+import { FaPlus, FaEdit, FaTrash, FaSave, FaTimes, FaChevronDown, FaChevronRight, FaSync } from 'react-icons/fa';
 import Toast from '@/components/Toast';
 import ConfirmModal from '@/components/ConfirmModal';
 
@@ -14,6 +14,7 @@ interface Subcategory {
 interface CategoryItem {
   id: number;
   name: string;
+  domainId?: number; // Pentru legarea tipurilor la domenii
   subcategories?: Subcategory[];
 }
 
@@ -107,7 +108,7 @@ export default function CategoriiProdusePage() {
       const result = await res.json();
       if (res.ok) {
         setCategories(prev => ({ ...prev, [body.category as string]: result.data }));
-        return { success: true };
+        return { success: true, message: result.message, productsUpdated: result.productsUpdated };
       } else {
         setToast({ message: result.error || 'Eroare', type: 'error' });
         return { success: false };
@@ -149,7 +150,8 @@ export default function CategoriiProdusePage() {
     
     const result = await apiCall({ action: 'update', category, id, name: trimmed });
     if (result.success) {
-      setToast({ message: 'Salvat cu succes', type: 'success' });
+      const msg = result.message ? `Salvat! ${result.message}` : 'Salvat cu succes';
+      setToast({ message: msg, type: 'success' });
       setEditing(null);
     }
   };
@@ -160,7 +162,8 @@ export default function CategoriiProdusePage() {
     
     const result = await apiCall({ action: 'updateSub', category, parentId, subId, name: trimmed });
     if (result.success) {
-      setToast({ message: 'Salvat cu succes', type: 'success' });
+      const msg = result.message ? `Salvat! ${result.message}` : 'Salvat cu succes';
+      setToast({ message: msg, type: 'success' });
       setEditing(null);
     }
   };
@@ -169,30 +172,85 @@ export default function CategoriiProdusePage() {
     setConfirmModal({
       isOpen: true,
       title: 'Confirmare ștergere',
-      message: `Sigur doriți să ștergeți "${name}"? ${category === 'types' ? 'Acest lucru va șterge și toate subcategoriile.' : ''}`,
+      message: `Sigur doriți să ștergeți "${name}"? ${category === 'types' ? 'Acest lucru va șterge și toate subcategoriile.' : ''} Produsele asociate vor fi mutate la "Altele".`,
       onConfirm: async () => {
         const result = await apiCall({ action: 'delete', category, id });
         if (result.success) {
-          setToast({ message: 'Șters cu succes', type: 'success' });
+          const msg = result.message ? `Șters! ${result.message}` : 'Șters cu succes';
+          setToast({ message: msg, type: 'success' });
         }
         setConfirmModal({ isOpen: false, title: '', message: '', onConfirm: () => {} });
       },
     });
   };
 
+  const handleImportFromProducts = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch('/admin/api/product-categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ action: 'importFromProducts', category: 'domains' }),
+      });
+      const result = await res.json();
+      if (res.ok) {
+        setCategories({
+          domains: result.domains,
+          types: result.types,
+          manufacturers: result.manufacturers
+        });
+        setToast({ message: result.message || 'Import realizat cu succes', type: 'success' });
+      } else {
+        setToast({ message: result.error || 'Eroare la import', type: 'error' });
+      }
+    } catch (error) {
+      console.error('Import error:', error);
+      setToast({ message: 'Eroare de conexiune', type: 'error' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleDeleteSubcategory = (category: string, parentId: number, subId: number, name: string) => {
     setConfirmModal({
       isOpen: true,
       title: 'Confirmare ștergere',
-      message: `Sigur doriți să ștergeți subcategoria "${name}"?`,
+      message: `Sigur doriți să ștergeți subcategoria "${name}"? Produsele asociate vor fi mutate la categoria părinte.`,
       onConfirm: async () => {
         const result = await apiCall({ action: 'deleteSub', category, parentId, subId });
         if (result.success) {
-          setToast({ message: 'Șters cu succes', type: 'success' });
+          const msg = result.message ? `Șters! ${result.message}` : 'Șters cu succes';
+          setToast({ message: msg, type: 'success' });
         }
         setConfirmModal({ isOpen: false, title: '', message: '', onConfirm: () => {} });
       },
     });
+  };
+
+  const handleSetDomain = async (typeId: number, domainId: number | undefined) => {
+    setSaving(true);
+    try {
+      const res = await fetch('/admin/api/product-categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ action: 'setDomain', category: 'types', id: typeId, domainId }),
+      });
+      const result = await res.json();
+      if (res.ok) {
+        setCategories(prev => ({ ...prev, types: result.data }));
+        const domainName = categories.domains.find(d => d.id === domainId)?.name || 'Toate';
+        setToast({ message: `Tip asociat la: ${domainName}`, type: 'success' });
+      } else {
+        setToast({ message: result.error || 'Eroare', type: 'error' });
+      }
+    } catch (error) {
+      console.error('Error setting domain:', error);
+      setToast({ message: 'Eroare de conexiune', type: 'error' });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const renderSimpleCategory = (
@@ -319,6 +377,17 @@ export default function CategoriiProdusePage() {
                   ) : (
                     <>
                       <span className="flex-1 font-medium">{type.name}</span>
+                      <select
+                        value={type.domainId || ''}
+                        onChange={(e) => handleSetDomain(type.id, e.target.value ? parseInt(e.target.value) : undefined)}
+                        className="text-xs border rounded px-2 py-1 bg-white"
+                        title="Domeniu"
+                      >
+                        <option value="">Toate domeniile</option>
+                        {categories.domains.map(d => (
+                          <option key={d.id} value={d.id}>{d.name}</option>
+                        ))}
+                      </select>
                       {hasSubcategories && (
                         <span className="text-xs text-gray-500 bg-gray-200 px-2 py-1 rounded">
                           {type.subcategories!.length} subcategorii
@@ -430,15 +499,26 @@ export default function CategoriiProdusePage() {
 
   return (
     <div className="min-h-screen bg-gray-100 p-8">
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold">Categorii Produse</h1>
-          <button
-            onClick={() => router.push('/admin')}
-            className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
-          >
-            Înapoi la Admin
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={handleImportFromProducts}
+              disabled={saving}
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+              title="Importă categorii din produsele existente"
+            >
+              <FaSync className={saving ? 'animate-spin' : ''} />
+              Import din produse
+            </button>
+            <button
+              onClick={() => router.push('/admin')}
+              className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+            >
+              Înapoi la Admin
+            </button>
+          </div>
         </div>
 
         {saving && (
@@ -447,9 +527,11 @@ export default function CategoriiProdusePage() {
           </div>
         )}
 
-        <div className="grid lg:grid-cols-3 gap-6">
+        <div className="grid lg:grid-cols-4 gap-6">
           {renderSimpleCategory('Domenii', categories.domains, 'domains', newDomain, setNewDomain)}
-          {renderTypesWithSubcategories()}
+          <div className="lg:col-span-2">
+            {renderTypesWithSubcategories()}
+          </div>
           {renderSimpleCategory('Producători', categories.manufacturers, 'manufacturers', newManufacturer, setNewManufacturer)}
         </div>
       </div>

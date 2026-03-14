@@ -9,7 +9,10 @@ export async function generateOrderConfirmationPdfBuffer(order: any, language?: 
   
   // Translations
   const txt = {
-    orderConfirmation: lang === 'en' ? 'Order Confirmation' : 'Confirmare Comanda',
+    orderConfirmation: lang === 'en' ? 'Order Received' : 'Primire Comanda',
+    priceDisclaimer: lang === 'en' 
+      ? 'The prices shown are indicative. A PREV-COR TPM consultant will contact you shortly to confirm the final price before processing.'
+      : 'Preturile afisate sunt orientative. Un consultant PREV-COR TPM te va contacta in scurt timp pentru a confirma pretul final inainte de procesare.',
     orderNumber: lang === 'en' ? 'Order number' : 'Numar comanda',
     orderDate: lang === 'en' ? 'Order date' : 'Data comenzii',
     currency: lang === 'en' ? 'Currency' : 'Moneda',
@@ -73,7 +76,26 @@ export async function generateOrderConfirmationPdfBuffer(order: any, language?: 
     font: helveticaBold,
     color: rgb(0, 0.32, 0.61),
   });
-  y -= 30;
+  y -= 18;
+  
+  // Prețuri orientative banner
+  page.drawRectangle({
+    x: margin,
+    y: y - 28,
+    width: width - 2 * margin,
+    height: 26,
+    color: rgb(1, 0.95, 0.82),
+    borderColor: rgb(0.96, 0.62, 0.04),
+    borderWidth: 1,
+  });
+  page.drawText(`ATENTIE! ${txt.priceDisclaimer}`, {
+    x: margin + 8,
+    y: y - 20,
+    size: 8,
+    font: helveticaBold,
+    color: rgb(0.57, 0.25, 0.05),
+  });
+  y -= 40;
   
   // Order info
   page.drawText(`${txt.orderNumber}: ${order.number || order.id || '-'}`, {
@@ -83,10 +105,22 @@ export async function generateOrderConfirmationPdfBuffer(order: any, language?: 
     font: helveticaBold,
   });
   
-  function formatDateDMY(val: string) {
+  function formatDateDMY(val: any) {
     if (!val) return '-';
-    const d = new Date(val);
-    if (isNaN(d.getTime())) return '-';
+    // Handle Date object
+    if (val instanceof Date || (typeof val === 'object' && val.getTime)) {
+      const z = (n: number) => n.toString().padStart(2, '0');
+      return `${z(val.getDate())}.${z(val.getMonth() + 1)}.${val.getFullYear()}`;
+    }
+    const str = String(val);
+    // Handle dd.mm.yyyy format
+    const parts = str.split('.');
+    if (parts.length === 3 && parts[0].length <= 2) {
+      return `${parts[0].padStart(2, '0')}.${parts[1].padStart(2, '0')}.${parts[2]}`;
+    }
+    // Handle ISO string
+    const d = new Date(str);
+    if (isNaN(d.getTime())) return str;
     const z = (n: number) => n.toString().padStart(2, '0');
     return `${z(d.getDate())}.${z(d.getMonth() + 1)}.${d.getFullYear()}`;
   }
@@ -119,70 +153,10 @@ export async function generateOrderConfirmationPdfBuffer(order: any, language?: 
   const col1X = margin;
   const col2X = width / 2 + 20;
   
-  // Supplier header
-  page.drawText(txt.supplier, {
-    x: col1X,
-    y: y,
-    size: 12,
-    font: helveticaBold,
-  });
-  
-  // Client header
-  page.drawText(txt.client, {
-    x: col2X,
-    y: y,
-    size: 12,
-    font: helveticaBold,
-  });
-  y -= 15;
-  
-  // Supplier name
-  page.drawText('S.C. PREV-COR TPM S.R.L.', {
-    x: col1X,
-    y: y,
-    size: 10,
-    font: helveticaBold,
-  });
-  
-  // Client name
-  page.drawText(client.denumire || client.name || '-', {
-    x: col2X,
-    y: y,
-    size: 10,
-    font: helveticaBold,
-  });
-  y -= 12;
-  
-  // Supplier CUI/RC
-  page.drawText('CIF: RO43434739   RC: J25/582/2020', {
-    x: col1X,
-    y: y,
-    size: 9,
-    font: helvetica,
-  });
-  
-  // Client CUI/RC
+  // --- Prepare client data ---
+  const clientName = client.denumire || client.name || '-';
   const clientCui = client.cui || '';
   const clientRc = client.reg || client.nrRegCom || '';
-  if (clientCui || clientRc) {
-    page.drawText(`CUI: ${clientCui}   RC: ${clientRc}`, {
-      x: col2X,
-      y: y,
-      size: 9,
-      font: helvetica,
-    });
-  }
-  y -= 12;
-  
-  // Supplier address
-  page.drawText('Str. Principala, Nr.70, Stroesti, jud. Mehedinti', {
-    x: col1X,
-    y: y,
-    size: 9,
-    font: helvetica,
-  });
-  
-  // Client address
   const clientAddress = client.address || client.adresaSediu || client.adresa || '';
   const clientCity = client.city || client.oras || '';
   let clientCounty = client.county || client.judet || '';
@@ -190,108 +164,43 @@ export async function generateOrderConfirmationPdfBuffer(order: any, language?: 
   let fullClientAddress = clientAddress;
   if (clientCity) fullClientAddress += `, ${clientCity}`;
   if (clientCounty) fullClientAddress += `, jud. ${clientCounty}`;
-  
-  // Truncate if too long
-  if (fullClientAddress.length > 60) {
-    fullClientAddress = fullClientAddress.substring(0, 57) + '...';
-  }
-  
-  page.drawText(fullClientAddress || '-', {
-    x: col2X,
-    y: y,
-    size: 9,
-    font: helvetica,
-  });
-  y -= 12;
-  
-  // Postal code
-  page.drawText(`${txt.postalCode}: 227208`, {
-    x: col1X,
-    y: y,
-    size: 9,
-    font: helvetica,
-  });
-  
+  if (fullClientAddress.length > 60) fullClientAddress = fullClientAddress.substring(0, 57) + '...';
   const clientPostalCode = client.postalCode || client.codPostal || '';
-  if (clientPostalCode) {
-    page.drawText(`${txt.postalCode}: ${clientPostalCode}`, {
-      x: col2X,
-      y: y,
-      size: 9,
-      font: helvetica,
-    });
-  }
-  y -= 12;
-  
-  // Bank account (IBAN)
-  page.drawText(`${txt.account}: RO23BRDE360SV67547173600`, {
-    x: col1X,
-    y: y,
-    size: 9,
-    font: helvetica,
-  });
-  
   const clientIban = client.iban || client.contBancar || '';
-  if (clientIban) {
-    page.drawText(`${txt.account}: ${clientIban}`, {
-      x: col2X,
-      y: y,
-      size: 9,
-      font: helvetica,
-    });
-  }
-  y -= 12;
-  
-  // Bank name
-  page.drawText(`${txt.bank}: BRD - Groupe Societe Generale`, {
-    x: col1X,
-    y: y,
-    size: 9,
-    font: helvetica,
-  });
-  
   const clientBank = client.bank || client.banca || '';
-  if (clientBank) {
-    page.drawText(`${txt.bank}: ${clientBank}`, {
-      x: col2X,
-      y: y,
-      size: 9,
-      font: helvetica,
-    });
+  const clientPhone = client.phone || client.telefon || '';
+  const clientEmail = client.email || '';
+
+  // Headers
+  page.drawText(txt.supplier, { x: col1X, y, size: 12, font: helveticaBold });
+  page.drawText(txt.client, { x: col2X, y, size: 12, font: helveticaBold });
+  y -= 15;
+
+  // Define aligned rows: [furnizorText, clientText, isBoldName]
+  const infoRows: [string, string, boolean][] = [
+    [COMPANY_CONFIG.name, clientName, true],
+    [`CIF: ${COMPANY_CONFIG.cui}   RC: ${COMPANY_CONFIG.regCom}`, clientCui || clientRc ? `CUI: ${clientCui}   RC: ${clientRc}` : '', false],
+    ['Str. Principala, Nr.70, Stroesti, jud. Mehedinti', fullClientAddress || '-', false],
+    [`${txt.postalCode}: ${COMPANY_CONFIG.address.postalCode}`, clientPostalCode ? `${txt.postalCode}: ${clientPostalCode}` : '', false],
+    [`${txt.account}: ${COMPANY_CONFIG.iban}`, clientIban ? `${txt.account}: ${clientIban}` : '', false],
+    [`${txt.bank}: BRD - Groupe Societe Generale`, clientBank ? `${txt.bank}: ${clientBank}` : '', false],
+    [`${txt.phoneLabel}: ${COMPANY_CONFIG.phone}`, `${txt.phoneLabel}: ${clientPhone || '-'}`, false],
+    [`${txt.emailLabel}: ${COMPANY_CONFIG.email}`, `${txt.emailLabel}: ${clientEmail || '-'}`, false],
+  ];
+
+  for (const [furnVal, clientVal, isBold] of infoRows) {
+    const fontSize = isBold ? 10 : 9;
+    const fontFace = isBold ? helveticaBold : helvetica;
+
+    if (furnVal) {
+      page.drawText(furnVal, { x: col1X, y, size: fontSize, font: fontFace });
+    }
+    if (clientVal) {
+      page.drawText(clientVal, { x: col2X, y, size: fontSize, font: fontFace });
+    }
+    y -= 12;
   }
-  y -= 12;
-  
-  // Phone
-  page.drawText(`${txt.phoneLabel}: ${COMPANY_CONFIG.phone}`, {
-    x: col1X,
-    y: y,
-    size: 9,
-    font: helvetica,
-  });
-  
-  page.drawText(`${txt.phoneLabel}: ${client.phone || client.telefon || '-'}`, {
-    x: col2X,
-    y: y,
-    size: 9,
-    font: helvetica,
-  });
-  y -= 12;
-  
-  // Email
-  page.drawText(`${txt.emailLabel}: ${COMPANY_CONFIG.email}`, {
-    x: col1X,
-    y: y,
-    size: 9,
-    font: helvetica,
-  });
-  
-  page.drawText(`${txt.emailLabel}: ${client.email || '-'}`, {
-    x: col2X,
-    y: y,
-    size: 9,
-    font: helvetica,
-  });
-  y -= 25;
+  y -= 13;
   
   // === PRODUCTS TABLE ===
   const produse = Array.isArray(order.products) && order.products.length 
@@ -452,8 +361,11 @@ export async function generateOrderConfirmationPdfBuffer(order: any, language?: 
     page.drawText(`${item.itemSubtotal.toFixed(2)}`, { x: tableX, y, size: 8, font: helvetica });
     tableX += colWidths[colIdx++];
     
-    // Delivery term
-    page.drawText(deliveryTerm.substring(0, 10), { x: tableX, y, size: 8, font: helvetica });
+    // Delivery term - sanitize diacritics for WinAnsi
+    const termSafe = deliveryTerm
+      .replace(/[ăĂ]/g, 'a').replace(/[âÂ]/g, 'a')
+      .replace(/[îÎ]/g, 'i').replace(/[șȘ]/g, 's').replace(/[țȚ]/g, 't');
+    page.drawText(termSafe.substring(0, 18), { x: tableX, y, size: 7, font: helvetica });
     
     y -= 24; // Spațiu pentru 2 linii: nume produs + variantă
   }
@@ -519,8 +431,11 @@ export async function generateOrderConfirmationPdfBuffer(order: any, language?: 
   });
   y -= 14;
   
-  // Total without VAT
+  // Prețurile sunt FĂRĂ TVA - adăugăm TVA la final
+  // Total fără TVA = subtotal + curier
   const totalFaraTVA = subtotalDupaReduceri + courierCost;
+  
+  // Total without VAT
   page.drawText(`${txt.totalNoVat}: ${totalFaraTVA.toFixed(2)} ${txt.currencyUnit}`, {
     x: summaryX,
     y: y,
@@ -529,7 +444,7 @@ export async function generateOrderConfirmationPdfBuffer(order: any, language?: 
   });
   y -= 14;
   
-  // VAT
+  // TVA
   const configTva = await getTvaPercent();
   const tvaPercent = typeof order.tva === 'number' && !isNaN(order.tva) ? order.tva : configTva;
   const tva = Math.round(totalFaraTVA * tvaPercent / 100 * 100) / 100;

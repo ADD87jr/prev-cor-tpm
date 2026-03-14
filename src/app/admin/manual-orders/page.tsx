@@ -6,7 +6,7 @@ import ConfirmModal from "@/components/ConfirmModal";
 export default function ManualOrdersPage() {
   const [orders, setOrders] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
-  const [defaultTva, setDefaultTva] = React.useState(19);
+  const [defaultTva, setDefaultTva] = React.useState(21);
   const [deleteOrderId, setDeleteOrderId] = React.useState<number | null>(null);
   
   // Încarcă TVA configurat din admin

@@ -1,0 +1,22 @@
+{
+  "timestamp": "2026-03-01T10-28-32",
+  "tables": {
+    "products": 5,
+    "productVariants": 4,
+    "orders": 0,
+    "siteSettings": 3,
+    "users": 0,
+    "coupons": 0,
+    "faqs": 0,
+    "reviews": 0,
+    "newsletters": 0,
+    "abandonedCarts": 0,
+    "auditLogs": 6,
+    "priceHistory": 0,
+    "invoices": 0,
+    "wishlists": 0,
+    "suppliers": 0,
+    "supplierProducts": 0,
+    "quoteRequests": 0
+  }
+}

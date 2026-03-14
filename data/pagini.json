@@ -51,6 +51,9 @@
     "moneda": "RON",
     "livrareGratuita": 500,
     "textLivrare": "",
-    "termenLivrare": ""
+    "termenLivrare": "",
+    "costCurierStandard": 25,
+    "costCurierExpress": 40,
+    "costPerKg": 1
   }
 }

@@ -1,0 +1,27 @@
+{
+  "timestamp": "2026-03-06T16-39-41",
+  "source": "Turso (Production)",
+  "url": "libsql://prevcortpm-add87jr.aws-eu-west-1.turso.io",
+  "tables": {
+    "Product": 5,
+    "ProductVariant": 4,
+    "Order": 0,
+    "OrderItem": 0,
+    "User": 1,
+    "SiteSettings": 4,
+    "Coupon": 0,
+    "FAQ": 0,
+    "Review": 0,
+    "Newsletter": 0,
+    "AbandonedCart": 11,
+    "AuditLog": 25,
+    "PriceHistory": 0,
+    "Invoice": 0,
+    "Wishlist": 0,
+    "Supplier": 0,
+    "SupplierProduct": 0,
+    "QuoteRequest": 0,
+    "ProductQuestion": 0,
+    "LoyaltyPoints": 0
+  }
+}

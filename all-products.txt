@@ -1,0 +1,131 @@
+﻿[dotenv@17.2.4] injecting env (21) from .env.local -- tip: ≡ƒæÑ sync secrets across teammates & machines: https://dotenvx.com/ops
+Conectare la Turso: libsql://prevcortpm-add87jr.aws-eu-west-1.turso.io
+Total produse ├«n DB: 25
+
+≡ƒôª TOATE PRODUSELE:
+==================
+1: Senzor inductiv de proximitate IG0094
+   SKU: IGA2008-BBOA | Pre╚¢: 110.81 RON
+   Brand: -
+   Imagine: /uploads/img_1773079599050.jpg
+
+2: Senzor inductiv de proximitate  IG5594
+   SKU: IGA2005-FRKG/PH | Pre╚¢: 67.81 RON
+   Brand: -
+   Imagine: /uploads/img_1773080610380.jpg
+
+3: Senzor inductiv de proximitate E2E-X5ME1
+   SKU: DEL-E2EX5ME1 | Pre╚¢: 70.2 RON
+   Brand: -
+   Imagine: /uploads/img_1773083239638.jpeg
+
+4: Senzor inductiv de proximitate IME12-04BPSZW2S
+   SKU: 1040766 | Pre╚¢: 38.17 RON
+   Brand: -
+   Imagine: /uploads/img_1773085008649.jpeg
+
+5: Senzor inductiv de proximitate IME08-02BPSZT0S
+   SKU: 1040870 | Pre╚¢: 54 RON
+   Brand: -
+   Imagine: /uploads/img_1773161663236.jpeg
+
+6: Senzor inductiv de proximitate BES M12MI-PSC40B-S04G
+   SKU: BES0068 | Pre╚¢: 31.08 RON
+   Brand: -
+   Imagine: /uploads/img_1773163855873.jpeg
+
+7: Senzor inductiv de proximitate BI5-M18-AP6X
+   SKU: 46110 | Pre╚¢: 108 RON
+   Brand: -
+   Imagine: /uploads/img_1773165435615.jpeg
+
+8: Senzor inductiv NBB5-18GM50-E2
+   SKU: NBB5-18GM50-E2 | Pre╚¢: 54 RON
+   Brand: -
+   Imagine: /uploads/img_1773166641838.jpeg
+
+9: Senzor inductiv de proximitate DW-AS-503-M18
+   SKU: DW-AS-503-M18-002 | Pre╚¢: 368.28 RON
+   Brand: -
+   Imagine: /uploads/img_1773167411293.webp
+
+10: Sursa alimentare SIMATIC PM 1207/1AC/24VDC/2.5A
+   SKU: 6EP1332-1SH71 | Pre╚¢: 198 RON
+   Brand: -
+   Imagine: /uploads/img_1773246778220.jpeg
+
+11: Sursa de alimentare SITOP PSU100S/1AC/24VDC/5A
+   SKU: 6EP1333-2BA20 | Pre╚¢: 270 RON
+   Brand: -
+   Imagine: /uploads/img_1773247459398.jpeg
+
+12: Sursa de alimentare Mean Well HDR-60-24 
+   SKU: HDR-60-24 | Pre╚¢: 40.5 RON
+   Brand: -
+   Imagine: /uploads/img_1773248202683.jpg
+
+13: Sursa alimentare Mean Well HDR-30-24 
+   SKU: HDR-30-24  | Pre╚¢: 22.5 RON
+   Brand: -
+   Imagine: /uploads/img_1773248777543.jpg
+
+14: Sursa de alimentare QUINT4-PS/1AC/24DC/5
+   SKU: 2904600 | Pre╚¢: 360 RON
+   Brand: -
+   Imagine: /uploads/img_1773249539728.jpg
+
+15: Sursa alimentare TRIO-PS-2G/1AC/24DC/10
+   SKU: 2903149 | Pre╚¢: 225 RON
+   Brand: -
+   Imagine: /uploads/img_1773250782528.jpg
+
+16: Sursa alimentare S8VK-C24024 
+   SKU: S8VK-C24024  | Pre╚¢: 198 RON
+   Brand: -
+   Imagine: /uploads/img_1773251388892.jpg
+
+17: Sursa alimentare ABLM1A24012
+   SKU: ABLM1A24012 | Pre╚¢: 171 RON
+   Brand: -
+   Imagine: /uploads/img_1773252500509.jpeg
+
+18: Sursa de alimentare DRP024V060W1AA
+   SKU: 108-DRP024V060W1AA | Pre╚¢: 43.19 RON
+   Brand: -
+   Imagine: /uploads/img_1773253638785.jpeg
+
+19: Sursa de alimentare PRO ECO 120W 24V 5A II
+   SKU: 3025570000 | Pre╚¢: 144 RON
+   Brand: -
+   Imagine: /uploads/img_1773254305157.jpg
+
+20: Controller logic programabil (PLC) 6ED1052-1HB08-0BA2
+   SKU: 6ED1052-1HB08-0BA2 | Pre╚¢: 180 RON
+   Brand: -
+   Imagine: /uploads/img_1773329962639.jpeg
+
+21: Controler logic S7-1200
+   SKU: 6ES7212-1AE40-0XB0 | Pre╚¢: 342 RON
+   Brand: -
+   Imagine: /uploads/img_1773330859844.jpeg
+
+22: Releu logic programabil compact SR2B121BD - Zelio Logic SR2 Smart Relay
+   SKU: SR2B121BD | Pre╚¢: 180 RON
+   Brand: -
+   Imagine: /uploads/img_1773331685427.jpeg
+
+23: Controller logic programabil compact CP1E-E10DR-A - PLC Compact CP1E Economic
+   SKU: CP1E-E10DR-A | Pre╚¢: 162 RON
+   Brand: -
+   Imagine: /uploads/img_1773332389961.jpg
+
+24: Controller logic programabil compact DVP14SS211R - PLC Compact DVP-SS2
+   SKU: DVP14SS211R  | Pre╚¢: 176.04 RON
+   Brand: -
+   Imagine: /uploads/img_1773333280624.jpeg
+
+25: Controller logic programabil cu ecran tactil integrat V130-33-TR34 - PLC + HMI All-in-One
+   SKU: V130-33-TR34  | Pre╚¢: 405 RON
+   Brand: -
+   Imagine: /uploads/img_1773334955989.jpeg
+

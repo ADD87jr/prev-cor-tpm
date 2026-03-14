@@ -1,0 +1,32 @@
+{
+  "date": "2026-03-04T15:53:01.996Z",
+  "score": 95,
+  "results": {
+    "passed": [
+      "robots.txt există",
+      "robots.txt conține User-agent",
+      "robots.txt referă sitemap",
+      "manifest.json valid",
+      "Name: \"PREV-COR TPM\"",
+      "Short name: \"PREV-COR\"",
+      "Icons: 2 definite",
+      "Theme color: #2563eb",
+      "Metadata export găsit în layout",
+      "Title definit",
+      "Description definit",
+      "Open Graph tags definite",
+      "Twitter cards definite",
+      "sitemap.ts dinamic există",
+      "Structured data (JSON-LD) găsit",
+      "Total imagini: 88",
+      "Imagini WebP: 6",
+      "Configurație imagini găsită",
+      "Headers personalizate definite",
+      "Limba română setată (lang=\"ro\")"
+    ],
+    "warnings": [
+      "Recomandare: Convertește mai multe imagini la WebP"
+    ],
+    "errors": []
+  }
+}

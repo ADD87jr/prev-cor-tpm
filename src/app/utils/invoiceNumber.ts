@@ -11,8 +11,8 @@ export async function generateInvoiceNumber(orderId: number, series?: string): P
   const currentYear = new Date().getFullYear();
   
   // Check if invoice already exists for this order
-  const existingInvoice = await prisma.invoice.findUnique({
-    where: { orderId }
+  const existingInvoice = await prisma.invoice.findFirst({
+    where: { orderId, type: 'NORMAL' }
   });
   
   if (existingInvoice) {
@@ -49,8 +49,8 @@ export async function generateInvoiceNumber(orderId: number, series?: string): P
  * Get invoice number for an existing order (without creating new one)
  */
 export async function getInvoiceNumber(orderId: number): Promise<string | null> {
-  const invoice = await prisma.invoice.findUnique({
-    where: { orderId }
+  const invoice = await prisma.invoice.findFirst({
+    where: { orderId, type: 'NORMAL' }
   });
   
   if (!invoice) return null;

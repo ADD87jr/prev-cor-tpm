@@ -1,0 +1,74 @@
+[
+  {
+    "id": 1,
+    "adminId": "admin",
+    "action": "login",
+    "resource": "admin_auth",
+    "resourceId": null,
+    "details": null,
+    "ipAddress": "::1",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36 Edg/145.0.0.0",
+    "success": true,
+    "timestamp": "2026-03-01T08:37:22.922Z"
+  },
+  {
+    "id": 2,
+    "adminId": "admin",
+    "action": "login",
+    "resource": "admin_auth",
+    "resourceId": null,
+    "details": null,
+    "ipAddress": "::1",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36 Edg/145.0.0.0",
+    "success": true,
+    "timestamp": "2026-03-01T09:43:17.954Z"
+  },
+  {
+    "id": 3,
+    "adminId": "admin",
+    "action": "login",
+    "resource": "admin_auth",
+    "resourceId": null,
+    "details": null,
+    "ipAddress": "::1",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36 Edg/145.0.0.0",
+    "success": true,
+    "timestamp": "2026-03-01T09:48:54.235Z"
+  },
+  {
+    "id": 4,
+    "adminId": "admin",
+    "action": "login",
+    "resource": "admin_auth",
+    "resourceId": null,
+    "details": null,
+    "ipAddress": "::1",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36 Edg/145.0.0.0",
+    "success": true,
+    "timestamp": "2026-03-01T09:53:13.232Z"
+  },
+  {
+    "id": 5,
+    "adminId": "admin",
+    "action": "login",
+    "resource": "admin_auth",
+    "resourceId": null,
+    "details": null,
+    "ipAddress": "::1",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36 Edg/145.0.0.0",
+    "success": true,
+    "timestamp": "2026-03-01T10:05:52.711Z"
+  },
+  {
+    "id": 6,
+    "adminId": "admin",
+    "action": "login",
+    "resource": "admin_auth",
+    "resourceId": null,
+    "details": null,
+    "ipAddress": "::1",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36 Edg/145.0.0.0",
+    "success": true,
+    "timestamp": "2026-03-01T10:20:07.623Z"
+  }
+]

@@ -95,7 +95,7 @@ export default function EditarePaginiPage() {
   const [servicii, setServicii] = useState({ titlu: "", descriere: "", lista: [] as any[] });
   const [magazin, setMagazin] = useState({ titlu: "", descriere: "", banner: "" });
   const [contact, setContact] = useState({ titlu: "", telefon: "", email: "", adresa: "", codPostal: "", program: "" });
-  const [cos, setCos] = useState({ tva: 19, moneda: "RON", livrareGratuita: 500, textLivrare: "", termenLivrare: "" });
+  const [cos, setCos] = useState({ tva: 21, moneda: "RON", livrareGratuita: 500, textLivrare: "", termenLivrare: "", costCurierStandard: 25, costCurierExpress: 40, costPerKg: 1, termenScadentZile: 30 });
   const [companie, setCompanie] = useState({
     name: "S.C. PREV-COR TPM S.R.L.",
     shortName: "PREV-COR TPM",
@@ -650,7 +650,7 @@ export default function EditarePaginiPage() {
                   value={contact.email}
                   onChange={(e) => setContact({ ...contact, email: e.target.value })}
                   className="w-full border rounded px-3 py-2"
-                  placeholder="Ex: office@prev-cor-tpm.ro"
+                  placeholder="Ex: office@prevcortpm.ro"
                 />
               </div>
             </div>
@@ -735,7 +735,7 @@ export default function EditarePaginiPage() {
                   className="w-full border rounded px-3 py-2"
                   placeholder="Ex: 19"
                 />
-                <p className="text-xs text-gray-500 mt-1">Procentul TVA aplicat la produse (implicit 19%)</p>
+                <p className="text-xs text-gray-500 mt-1">Procentul TVA aplicat la produse (implicit 21%)</p>
               </div>
               <div>
                 <label className="block font-semibold mb-1">💰 Monedă</label>
@@ -784,6 +784,61 @@ export default function EditarePaginiPage() {
                 className="w-full border rounded px-3 py-2"
                 placeholder="Ex: Livrare gratuită pentru comenzi peste 500 RON"
               />
+            </div>
+
+            {/* Termen scadent factură */}
+            <div className="mt-4">
+              <label className="block font-semibold mb-1">🧾 Termen scadent factură (zile)</label>
+              <input
+                type="number"
+                min="1"
+                value={cos.termenScadentZile}
+                onChange={(e) => setCos({ ...cos, termenScadentZile: Number(e.target.value) })}
+                className="w-full border rounded px-3 py-2 max-w-xs"
+                placeholder="Ex: 30"
+              />
+              <p className="text-xs text-gray-500 mt-1">Numărul de zile până la scadența facturii (default: 30)</p>
+            </div>
+
+            {/* Costuri curier */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+              <div>
+                <label className="block font-semibold mb-1">📦 Cost curier standard (RON)</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={cos.costCurierStandard}
+                  onChange={(e) => setCos({ ...cos, costCurierStandard: Number(e.target.value) })}
+                  className="w-full border rounded px-3 py-2"
+                  placeholder="Ex: 25"
+                />
+                <p className="text-xs text-gray-500 mt-1">Bază cost livrare standard</p>
+              </div>
+              <div>
+                <label className="block font-semibold mb-1">🚀 Cost curier express (RON)</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={cos.costCurierExpress}
+                  onChange={(e) => setCos({ ...cos, costCurierExpress: Number(e.target.value) })}
+                  className="w-full border rounded px-3 py-2"
+                  placeholder="Ex: 40"
+                />
+                <p className="text-xs text-gray-500 mt-1">Bază cost livrare express</p>
+              </div>
+              <div>
+                <label className="block font-semibold mb-1">⚖️ Cost per produs (RON)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  value={cos.costPerKg}
+                  onChange={(e) => setCos({ ...cos, costPerKg: Number(e.target.value) })}
+                  className="w-full border rounded px-3 py-2"
+                  placeholder="Ex: 1"
+                />
+                <p className="text-xs text-gray-500 mt-1">Cost suplimentar per produs</p>
+              </div>
             </div>
 
             {/* Previzualizare */}

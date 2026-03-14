@@ -27,12 +27,18 @@ export async function POST(req: NextRequest) {
       paymentMethod = order.paymentMethod;
     }
     // Construiește structura pentru PDF
+    // Fetch delivery times from actual products in DB
+    const itemIds = Array.isArray(order.items) ? (order.items as any[]).map((i: any) => Number(i.id)).filter(Boolean) : [];
+    const productsDb = itemIds.length > 0 ? await prisma.product.findMany({ where: { id: { in: itemIds } }, select: { id: true, deliveryTime: true } }) : [];
+    const deliveryTimeMap = new Map(productsDb.map(p => [p.id, p.deliveryTime]));
+
     const pdfOrder = {
       series: series,
       number: parseInt(number),
       invoiceNumber: invoiceNumber,
       issueDate: order.date,
       dueDate: order.date,
+      date: order.date,
       currency: "RON",
       supplier: {
         name: COMPANY_CONFIG.name,
@@ -50,12 +56,12 @@ export async function POST(req: NextRequest) {
         unit: item.unit || "BUC",
         qty: item.quantity || item.qty || 1,
         price: item.price,
-        tva: item.tva || 19,
+        tva: item.tva || 21,
         discount: item.discount || 0,
         discountType: item.discountType || '',
         discountPercent: item.discountPercent || null,
-        deliveryTerm: item.deliveryTerm || item.deliveryTime || '-',
-        deliveryTime: item.deliveryTime || item.deliveryTerm || '-',
+        deliveryTerm: item.deliveryTerm || item.deliveryTime || deliveryTimeMap.get(Number(item.id)) || '-',
+        deliveryTime: item.deliveryTime || item.deliveryTerm || deliveryTimeMap.get(Number(item.id)) || '-',
         appliedCoupon: item.appliedCoupon || null,
       })) : [],
       delivery: {},

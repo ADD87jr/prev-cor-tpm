@@ -2,14 +2,14 @@
 import React, { useEffect, useState } from "react";
 import OrderDetailsModal from "../OrderDetailsModal";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Toast from "@/components/Toast";
 import ConfirmModal from "@/components/ConfirmModal";
 
 export default function AdminOrdersPage() {
   // Toast state
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-  const [defaultTva, setDefaultTva] = useState(19);
+  const [defaultTva, setDefaultTva] = useState(21);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   
   // Încarcă TVA configurat din admin
@@ -41,6 +41,7 @@ export default function AdminOrdersPage() {
     // ...existing code...
   const { data: session, status } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [statusFilter, setStatusFilter] = useState("");
@@ -58,9 +59,23 @@ export default function AdminOrdersPage() {
     if (clientFilter) params.append("userEmail", clientFilter);
     fetch(`/admin/api/orders?${params.toString()}`)
       .then(res => res.json())
-      .then(data => setOrders(data))
+      .then(data => setOrders(Array.isArray(data) ? data : []))
       .finally(() => setLoading(false));
   }, [statusFilter, dateFilter, clientFilter]);
+
+  // Deschide automat modalul de editare dacă există parametrul ?edit=orderId
+  useEffect(() => {
+    const editId = searchParams?.get('edit');
+    if (editId && orders.length > 0) {
+      const orderToEdit = orders.find(o => String(o.id) === editId);
+      if (orderToEdit) {
+        setModalOrder(orderToEdit);
+        setModalOpen(true);
+        // Curăță parametrul din URL după deschidere
+        router.replace('/admin/orders', { scroll: false });
+      }
+    }
+  }, [searchParams, orders, router]);
 
   // funcția fetchOrders nu mai este necesară
 
@@ -84,7 +99,8 @@ export default function AdminOrdersPage() {
       .sort((a, b) => String(a.id || '').localeCompare(String(b.id || '')) || a.name.localeCompare(b.name) || a.quantity - b.quantity);
   }
   const groups = new Map<string, any[]>();
-  for (const order of orders) {
+  const ordersArray = Array.isArray(orders) ? orders : [];
+  for (const order of ordersArray) {
     const groupKey = [
       normalizeEmail(order.clientData?.email || order.user?.email || ''),
       JSON.stringify(normalizeItems(order.items)),
@@ -119,9 +135,12 @@ export default function AdminOrdersPage() {
             <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="border rounded px-2 py-1">
               <option value="">Toate</option>
               <option value="nouă">Nouă</option>
+              <option value="awaiting_price">Așteptare confirmare preț</option>
+              <option value="pending">Confirmat - în procesare</option>
               <option value="așteptare plată">În așteptare plată</option>
               <option value="procesată">Procesată</option>
               <option value="livrată">Livrată</option>
+              <option value="cancelled">Anulată</option>
             </select>
           </div>
           <div>
@@ -172,6 +191,10 @@ export default function AdminOrdersPage() {
             <span>Comenzi noi: </span>
             <span>{orders.filter(o => o.status === "nouă").length}</span>
           </div>
+          <div className="bg-amber-100 rounded px-4 py-2 text-amber-900 font-semibold">
+            <span>Așteptare preț: </span>
+            <span>{orders.filter(o => o.status === "awaiting_price").length}</span>
+          </div>
           <div className="bg-orange-100 rounded px-4 py-2 text-orange-900 font-semibold">
             <span>În așteptare: </span>
             <span>{orders.filter(o => o.status === "așteptare plată").length}</span>
@@ -187,6 +210,10 @@ export default function AdminOrdersPage() {
           <div className="bg-pink-100 rounded px-4 py-2 text-pink-900 font-semibold">
             <span>Comenzi manuale: </span>
             <span>{orders.filter(o => o.source === "manual").length}</span>
+          </div>
+          <div className="bg-purple-100 rounded px-4 py-2 text-purple-900 font-semibold">
+            <span>Dropship: </span>
+            <span>{orders.filter(o => o.hasDropship).length}</span>
           </div>
           <div className="bg-gray-100 rounded px-4 py-2 text-gray-900 font-semibold">
             <span>Timp mediu procesare: </span>
@@ -241,6 +268,11 @@ export default function AdminOrdersPage() {
                   <span className="whitespace-nowrap overflow-x-auto block w-full" title={Array.isArray(order.items) ? order.items.map((item: any) => `${item.name} x ${(item.quantity ?? item.qty ?? 1)}`).join(', ') : ''}>
                     {Array.isArray(order.items) ? order.items.map((item: any) => `${item.name} x ${(item.quantity ?? item.qty ?? 1)}`).join(', ') : ''}
                   </span>
+                  {order.hasDropship && (
+                    <span className="ml-1 bg-purple-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded" title="Conține produse dropship">
+                      DROPSHIP
+                    </span>
+                  )}
                 </td>
                 {/* Total cu TVA: folosește totalul salvat în baza de date */}
                 <td className="p-2 w-40 whitespace-nowrap text-blue-900 font-bold">
@@ -309,9 +341,13 @@ export default function AdminOrdersPage() {
                     onClick={e => e.stopPropagation()}
                   >
                     <option value="nouă">Nouă</option>
+                    <option value="awaiting_price">Așteptare preț</option>
+                    <option value="pending">Confirmat</option>
                     <option value="așteptare plată">În așteptare plată</option>
                     <option value="procesată">Procesată</option>
+                    <option value="expediată">Expediată</option>
                     <option value="livrată">Livrată</option>
+                    <option value="cancelled">Anulată</option>
                   </select>
                 </td>
                 <td className="p-2">
@@ -405,7 +441,15 @@ export default function AdminOrdersPage() {
         onCancel={() => setDeleteOrderId(null)}
       />
 
-      <OrderDetailsModal open={modalOpen} onClose={() => setModalOpen(false)} orders={modalOrder ? [modalOrder] : []} />
+      <OrderDetailsModal 
+        open={modalOpen} 
+        onClose={() => setModalOpen(false)} 
+        orders={modalOrder ? [modalOrder] : []}
+        onUpdate={(updatedOrder) => {
+          setOrders(orders => orders.map(o => o.id === updatedOrder.id ? updatedOrder : o));
+          setModalOrder(updatedOrder);
+        }}
+      />
     </div>
   );
 }

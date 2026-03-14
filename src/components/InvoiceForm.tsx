@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 // Refactorizat: logica pentru produse folosește doar array de obiecte simple
 const InvoiceForm = () => {
   const [clientType, setClientType] = useState<'fizica' | 'companie'>('fizica');
-  const [defaultTva, setDefaultTva] = useState(19);
+  const [defaultTva, setDefaultTva] = useState(21);
   const [invoice, setInvoice] = useState<any>({
     client: {},
     products: [],
@@ -14,7 +14,7 @@ const InvoiceForm = () => {
     courierCost: 0,
     orderNumber: "",
     orderDate: new Date().toISOString().slice(0, 10),
-    tva: 19,
+    tva: 21,
   });
 
   // Încarcă TVA configurat din admin
@@ -229,7 +229,7 @@ const InvoiceForm = () => {
   const costCurier = invoice.courierCost ?? 0;
   // Metodă de plată
   const metodaPlata = invoice.paymentMethod || "Transfer bancar";
-  // Total fără TVA
+  // Prețurile sunt FĂRĂ TVA - adăugăm TVA la final
   const totalFaraTVA = subtotalDupaReduceri + costCurier;
   // TVA din formular (default din admin)
   const tvaPercent = invoice.tva ?? defaultTva;

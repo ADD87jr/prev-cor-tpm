@@ -13,6 +13,8 @@ interface CompareProduct {
   description?: string;
   specs?: string[];
   stock?: number;
+  deliveryTime?: string;
+  onDemand?: boolean;
 }
 
 interface CompareContextType {

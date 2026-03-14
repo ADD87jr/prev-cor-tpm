@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { FaSignInAlt, FaUserPlus } from "react-icons/fa";
-import { MdShoppingCart, MdFavorite } from "react-icons/md";
+import { MdShoppingCart, MdFavorite, MdSettings } from "react-icons/md";
 import { useCart } from "./CartContext";
 import { useWishlist } from "./WishlistContext";
 import SearchAutocomplete from "./SearchAutocomplete";
@@ -41,6 +41,8 @@ export default function Navbar() {
     { href: "/services", label: t("nav.services") },
     { href: "/shop", label: t("nav.shop") },
     { href: "/categorii", label: language === "en" ? "Categories" : "Categorii" },
+    { href: "/configurator", label: language === "en" ? "Configurator" : "Configurator" },
+    { href: "/solicita-oferta", label: language === "en" ? "Request Quote" : "Solicită Ofertă" },
     { href: "/blog", label: "Blog" },
     { href: "/contact", label: t("nav.contact") },
   ];
@@ -108,6 +110,12 @@ export default function Navbar() {
                 </Link>
               </li>
             )}
+            <li>
+              <Link href="/configuratii" className="relative flex items-center gap-1 text-purple-600 hover:underline font-semibold text-base" aria-label="Configurațiile mele">
+                <MdSettings className="w-5 h-5" />
+                <span className="hidden sm:inline">{language === "en" ? "My Configs" : "Configurații"}</span>
+              </Link>
+            </li>
             <li>
               <Link href="/cart" className="relative flex items-center gap-1 text-blue-700 hover:underline font-semibold text-base" aria-label="Vezi coșul de cumpărături">
                 <span className="relative">

@@ -2,6 +2,21 @@ import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
 
 const nextConfig: NextConfig = {
+  images: {
+    dangerouslyAllowSVG: true,
+    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
+    // Image optimization settings
+    formats: ["image/avif", "image/webp"],
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384, 512],
+    minimumCacheTTL: 60 * 60 * 24 * 30, // 30 days cache
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "**",
+      },
+    ],
+  },
   // Include PDFKit AFM font files in serverless functions
   outputFileTracingIncludes: {
     '/api/*': ['./node_modules/pdfkit/js/data/**/*', './public/fonts/afm/**/*'],

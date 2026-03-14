@@ -3,12 +3,15 @@ import PDFDocument from "pdfkit";
 import path from "path";
 import fs from "fs";
 import { calculateCartSummary, CartSummaryProduct } from "@/app/utils/cartSummary";
+import { getCartSettings } from "@/lib/getTvaPercent";
 
 const fontPath = path.join(process.cwd(), "public", "fonts", "Roboto-Regular.ttf");
 const fontBoldPath = path.join(process.cwd(), "public", "fonts", "Roboto-Bold.ttf");
 
 export async function POST(req: NextRequest) {
-  const { client, items } = await req.json();
+  const { client, items, deliveryType } = await req.json();
+  // Citește setările de coș din admin
+  const cartSettings = await getCartSettings();
   // Transformă produsele în CartSummaryProduct
   const products: CartSummaryProduct[] = items.map((item: any) => ({
     id: item.id,
@@ -20,7 +23,15 @@ export async function POST(req: NextRequest) {
     appliedCoupon: item.appliedCoupon || null,
     deliveryTime: item.deliveryTime || item.deliveryTerm || '-'
   }));
-  const summary = calculateCartSummary({ products });
+  const summary = calculateCartSummary({
+    products,
+    deliveryType,
+    TVA_PERCENT: cartSettings.tva,
+    livrareGratuita: cartSettings.livrareGratuita,
+    costCurierStandard: cartSettings.costCurierStandard,
+    costCurierExpress: cartSettings.costCurierExpress,
+    costPerKg: cartSettings.costPerKg,
+  });
   const doc = new PDFDocument({ margin: 40, autoFirstPage: false });
   doc.registerFont("Roboto", fontPath);
   doc.registerFont("Roboto-Bold", fontBoldPath);

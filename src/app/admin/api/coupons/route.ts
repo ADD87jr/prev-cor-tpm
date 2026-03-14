@@ -3,11 +3,17 @@ import { getCoupons, addCoupon, updateCoupon, deleteCoupon, validateCoupon } fro
 import { adminAuthMiddleware } from "@/lib/auth-middleware";
 
 export async function GET(req: NextRequest) {
-  // Protejare autentificare
-  const authError = await adminAuthMiddleware(req);
-  if (authError) return authError;
+  try {
+    // Protejare autentificare
+    const authError = await adminAuthMiddleware(req);
+    if (authError) return authError;
 
-  return NextResponse.json(getCoupons());
+    const coupons = await getCoupons();
+    return NextResponse.json(coupons);
+  } catch (error) {
+    console.error("GET /admin/api/coupons error:", error);
+    return NextResponse.json([], { status: 200 });
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -17,11 +23,12 @@ export async function POST(req: NextRequest) {
 
   const data = await req.json();
   // Validare cod unic
-  const existing = getCoupons().find(c => c.code === data.code);
+  const all = await getCoupons();
+  const existing = all.find(c => c.code === data.code);
   if (existing) {
     return NextResponse.json({ error: "Există deja un cupon cu acest cod!" }, { status: 400 });
   }
-  const newCoupon = addCoupon(data);
+  const newCoupon = await addCoupon(data);
   return NextResponse.json(newCoupon);
 }
 
@@ -32,7 +39,7 @@ export async function PUT(req: NextRequest) {
 
   const data = await req.json();
   const { id, ...rest } = data;
-  const updated = updateCoupon(id, rest);
+  const updated = await updateCoupon(id, rest);
   if (!updated) return NextResponse.json({ error: "Cuponul nu a fost găsit" }, { status: 404 });
   return NextResponse.json(updated);
 }
@@ -54,7 +61,7 @@ export async function DELETE(req: NextRequest) {
   }
   let deleted = false;
   if (id) {
-    deleteCoupon(Number(id));
+    await deleteCoupon(Number(id));
     deleted = true;
   }
   return NextResponse.json({ success: deleted });
@@ -62,7 +69,7 @@ export async function DELETE(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   const { code } = await req.json();
-  const coupon = validateCoupon(code);
+  const coupon = await validateCoupon(code);
   if (!coupon) return NextResponse.json({ error: "Cupon invalid sau expirat" }, { status: 404 });
   return NextResponse.json(coupon);
 }

@@ -28,7 +28,7 @@ export default function AddManualOrderPage() {
     const [redirecting, setRedirecting] = useState(false);
     const [success, setSuccess] = useState(false);
     const isSubmitting = useRef(false);
-    const [defaultTva, setDefaultTva] = useState(19);
+    const [defaultTva, setDefaultTva] = useState(21);
     
     // Încarcă TVA configurat din admin
     useEffect(() => {
@@ -57,7 +57,7 @@ export default function AddManualOrderPage() {
   const [courierCost, setCourierCost] = useState<number>(25);
   const [courierType, setCourierType] = useState<string>('standard');
   const [products, setProducts] = useState<ProductRow[]>([]);
-  const [tvaPercent, setTvaPercent] = useState(19);
+  const [tvaPercent, setTvaPercent] = useState(21);
   const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon>(null);
   const [couponCode, setCouponCode] = useState("");
   const [couponError, setCouponError] = useState<string | null>(null);
@@ -698,8 +698,9 @@ export default function AddManualOrderPage() {
                 >
                   <option value="transfer bancar">Transfer bancar</option>
                   <option value="Ramburs">Ramburs</option>
-                  <option value="Plată în rate">Plată în rate</option>
-                  <option value="Card online">Card online</option>
+                  {/* Card și rate dezactivate temporar - prețuri orientative */}
+                  {/* <option value="Plată în rate">Plată în rate</option> */}
+                  {/* <option value="Card online">Card online</option> */}
                 </select>
               </div>
               <div className="flex items-center gap-4 mb-2">

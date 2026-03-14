@@ -8,6 +8,8 @@ import { useWishlist } from "../_components/WishlistContext";
 import { useLanguage } from "../_components/LanguageContext";
 
 type Order = { id: string; date: string; total: number; clientData?: any; awb?: string; courierName?: string; status?: string };
+type SavedAddress = { id: string; name: string; address: string; city: string; county: string; postalCode: string; phone: string };
+type LoyaltyEntry = { id: number; points: number; reason: string; orderId: number | null; createdAt: string };
 
 // Link-uri tracking pentru curierii din România
 const COURIER_TRACKING_URLS: Record<string, string> = {
@@ -36,6 +38,9 @@ export default function AccountPage() {
   const [loadingOrders, setLoadingOrders] = useState(false);
   const { items: wishlist } = useWishlist();
   const { language } = useLanguage();
+  const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
+  const [loyaltyPoints, setLoyaltyPoints] = useState(0);
+  const [loyaltyHistory, setLoyaltyHistory] = useState<LoyaltyEntry[]>([]);
   
   const txt = {
     loading: language === "en" ? "Loading..." : "Se încarcă...",
@@ -60,9 +65,25 @@ export default function AccountPage() {
     backToShop: language === "en" ? "Back to shop" : "Înapoi la magazin",
     logout: language === "en" ? "Logout" : "Deconectare",
     statusDelivered: language === "en" ? "delivered" : "livrată",
+    statusShipped: language === "en" ? "shipped" : "expediată",
     statusProcessed: language === "en" ? "processed" : "procesată",
     statusNew: language === "en" ? "new" : "nouă",
     statusPending: language === "en" ? "Pending" : "În așteptare",
+    savedAddresses: language === "en" ? "My saved addresses" : "Adresele mele salvate",
+    noAddresses: language === "en" ? "No saved addresses yet." : "Nu ai adrese salvate.",
+    deleteAddress: language === "en" ? "Delete" : "Șterge",
+    myReviews: language === "en" ? "My reviews" : "Recenziile mele",
+    loyaltyPoints: language === "en" ? "Loyalty Points" : "Puncte de fidelitate",
+    totalPoints: language === "en" ? "Total points:" : "Total puncte:",
+    pointsHistory: language === "en" ? "Points history" : "Istoric puncte",
+    reasonPurchase: language === "en" ? "Purchase" : "Achiziție",
+    reasonReview: language === "en" ? "Review" : "Recenzie",
+    reasonReferral: language === "en" ? "Referral" : "Recomandare",
+    reasonRedeem: language === "en" ? "Redeemed" : "Utilizate",
+    reasonBonus: language === "en" ? "Bonus" : "Bonus",
+    noPointsYet: language === "en" ? "No loyalty points yet. Earn points with every order!" : "Nu ai puncte încă. Câștigă puncte cu fiecare comandă!",
+    pointsInfo: language === "en" ? "Earn 1 point for every 10 RON spent. Collect points and use them for discounts!" : "Câștigi 1 punct pentru fiecare 10 RON cheltuiți. Colectează puncte și folosește-le pentru reduceri!",
+    forOrder: language === "en" ? "For order" : "Pentru comanda",
   };
 
   useEffect(() => {
@@ -83,9 +104,38 @@ export default function AccountPage() {
           } else {
             setOrders([]);
           }
+          // Extrage adresele unice din comenzi
+          const addressMap = new Map<string, SavedAddress>();
+          (Array.isArray(data) ? data : []).forEach((o: any) => {
+            const cd = o.clientData;
+            if (cd?.address && cd?.city) {
+              const key = `${cd.address}-${cd.city}-${cd.postalCode || ""}`;
+              if (!addressMap.has(key)) {
+                addressMap.set(key, {
+                  id: key,
+                  name: cd.name || cd.nume || "",
+                  address: cd.address,
+                  city: cd.city,
+                  county: cd.county || "",
+                  postalCode: cd.postalCode || "",
+                  phone: cd.phone || cd.telefon || "",
+                });
+              }
+            }
+          });
+          setSavedAddresses(Array.from(addressMap.values()));
         })
         .catch(() => setOrders([]))
         .finally(() => setLoadingOrders(false));
+
+      // Fetch loyalty points
+      fetch(`/api/loyalty-points?email=${encodeURIComponent(session.user.email)}`)
+        .then(res => res.json())
+        .then(data => {
+          setLoyaltyPoints(data.totalPoints || 0);
+          setLoyaltyHistory(data.history || []);
+        })
+        .catch(() => {});
     }
   }, [session?.user?.email]);
 
@@ -123,6 +173,7 @@ export default function AccountPage() {
                 ? COURIER_TRACKING_URLS[order.courierName] + order.awb
                 : null;
               const statusLabel = order.status === 'livrată' ? txt.statusDelivered :
+                                  order.status === 'expediată' ? txt.statusShipped :
                                   order.status === 'procesată' ? txt.statusProcessed :
                                   order.status === 'nouă' ? txt.statusNew : txt.statusPending;
               return (
@@ -132,6 +183,7 @@ export default function AccountPage() {
                 <td className="p-2">
                   <span className={`px-2 py-1 rounded text-xs font-semibold ${
                     order.status === 'livrată' ? 'bg-green-100 text-green-700' :
+                    order.status === 'expediată' ? 'bg-purple-100 text-purple-700' :
                     order.status === 'procesată' ? 'bg-yellow-100 text-yellow-700' :
                     order.status === 'nouă' ? 'bg-blue-100 text-blue-700' :
                     'bg-gray-100 text-gray-700'
@@ -209,6 +261,75 @@ export default function AccountPage() {
             </li>
           ))}
         </ul>
+      )}
+
+      <h2 className="text-xl font-semibold mb-2 mt-8">{txt.savedAddresses}</h2>
+      {savedAddresses.length === 0 ? (
+        <div className="mb-8 text-gray-600">{txt.noAddresses}</div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8">
+          {savedAddresses.map((addr) => {
+            // Construiește adresa completă fără duplicări
+            const parts: string[] = [];
+            if (addr.address) parts.push(addr.address);
+            // Adaugă orașul doar dacă nu e deja inclus în address
+            if (addr.city && !addr.address.toUpperCase().includes(addr.city.toUpperCase())) {
+              parts.push(addr.city);
+            }
+            // Adaugă județul doar dacă nu e deja inclus în address
+            if (addr.county && !addr.address.toUpperCase().includes(addr.county.toUpperCase())) {
+              parts.push(addr.county);
+            }
+            if (addr.postalCode) parts.push(addr.postalCode);
+            const fullAddress = parts.join(", ");
+
+            return (
+            <div key={addr.id} className="bg-gray-50 rounded-lg p-3 border text-sm">
+              <div className="font-semibold">{addr.name}</div>
+              <div className="text-gray-600">{fullAddress}</div>
+              {addr.phone && <div className="text-gray-500">📞 {addr.phone}</div>}
+            </div>
+            );
+          })}
+        </div>
+      )}
+
+      <h2 className="text-xl font-semibold mb-2 mt-8">🏆 {txt.loyaltyPoints}</h2>
+      <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-4 mb-4">
+        <div className="flex items-center gap-3 mb-2">
+          <span className="text-3xl font-bold text-blue-700">{loyaltyPoints}</span>
+          <span className="text-gray-600">{txt.totalPoints}</span>
+        </div>
+        <p className="text-sm text-gray-500">{txt.pointsInfo}</p>
+      </div>
+      {loyaltyHistory.length > 0 && (
+        <details className="mb-8">
+          <summary className="cursor-pointer text-blue-600 hover:underline text-sm font-medium">{txt.pointsHistory}</summary>
+          <ul className="mt-2 space-y-1">
+            {loyaltyHistory.map((entry) => {
+              const reasonLabel = entry.reason === "purchase" ? txt.reasonPurchase :
+                entry.reason === "review" ? txt.reasonReview :
+                entry.reason === "referral" ? txt.reasonReferral :
+                entry.reason === "redeem" ? txt.reasonRedeem :
+                entry.reason === "bonus" ? txt.reasonBonus : entry.reason;
+              return (
+                <li key={entry.id} className="flex justify-between items-center text-sm border-b pb-1">
+                  <span>
+                    <span className={`font-semibold ${entry.points > 0 ? "text-green-600" : "text-red-600"}`}>
+                      {entry.points > 0 ? "+" : ""}{entry.points}
+                    </span>
+                    {" "}{reasonLabel}
+                    {entry.orderId && <span className="text-gray-400"> ({txt.forOrder} CMD-{entry.orderId})</span>}
+                  </span>
+                  <span className="text-gray-400 text-xs">{new Date(entry.createdAt).toLocaleDateString("ro-RO")}</span>
+                </li>
+              );
+            })}
+          </ul>
+        </details>
+      )}
+      {loyaltyHistory.length === 0 && (
+        <div className="mb-8 text-gray-500 text-sm">{txt.noPointsYet}</div>
       )}
 
       <div className="flex gap-3 mt-6">

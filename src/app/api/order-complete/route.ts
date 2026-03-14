@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { generateOrderConfirmationPdfBuffer } from "@/app/utils/orderConfirmationPdfLib";
 import { calculateCartSummary, CartSummaryProduct } from "@/app/utils/cartSummary";
 import { sendEmail } from "@/app/utils/email";
-import { getTvaPercent } from "@/lib/getTvaPercent";
+import { getCartSettings } from "@/lib/getTvaPercent";
 import { notifyNewOrder } from "@/lib/push-notifications";
 import { COMPANY_CONFIG } from "@/lib/companyConfig";
 
@@ -61,6 +61,8 @@ export async function POST(req: NextRequest) {
       // Address translations
       county: lang === 'en' ? 'county' : 'jud.',
       postalCodeLabel: lang === 'en' ? 'postal code' : 'cod poștal',
+      // Prețuri orientative
+      priceDisclaimer: lang === 'en' ? 'The prices shown are indicative. A PREV-COR TPM consultant will contact you shortly to confirm the final price before processing.' : 'Prețurile afișate sunt orientative. Un consultant PREV-COR TPM te va contacta în scurt timp pentru a confirma prețul final înainte de procesare.',
     };
     const subject = txt.subject;
     console.log('[ORDER-COMPLETE] Payload primit:', { userId, userEmail, manualOrderId, paymentMethod, items });
@@ -180,9 +182,11 @@ export async function POST(req: NextRequest) {
     }
     const reducereTotala = subtotalPretVanzare - subtotalDupaReduceri;
     const courierCostVal = typeof courierCost === 'number' ? courierCost : 0;
+    // Citește setările de coș din admin
+    const cartSettings = await getCartSettings();
+    const TVA_PERCENT = cartSettings.tva;
+    // Prețurile sunt FĂRĂ TVA - adăugăm TVA la final
     const totalFaraTVA = subtotalDupaReduceri + courierCostVal;
-    // TVA dinamic din admin
-    const TVA_PERCENT = await getTvaPercent();
     const tva = totalFaraTVA * (TVA_PERCENT / 100);
     const totalCuTVA = totalFaraTVA + tva;
     // Email fraza plată - robust și explicit pentru orice metodă
@@ -219,7 +223,15 @@ export async function POST(req: NextRequest) {
       productDiscountValue: item.productDiscount || null,
       couponDiscountValue: item.couponDiscount || null
     }));
-    const summary = calculateCartSummary({ products });
+    const summary = calculateCartSummary({
+      products,
+      deliveryType,
+      TVA_PERCENT: cartSettings.tva,
+      livrareGratuita: cartSettings.livrareGratuita,
+      costCurierStandard: cartSettings.costCurierStandard,
+      costCurierExpress: cartSettings.costCurierExpress,
+      costPerKg: cartSettings.costPerKg,
+    });
     
     // Verifică dacă există cupoane
     const hasCoupon = products.some(item => item.appliedCoupon || (typeof item.couponDiscountValue === 'number' && item.couponDiscountValue > 0));
@@ -308,20 +320,42 @@ export async function POST(req: NextRequest) {
     // Sumar comanda - adresa și telefonul apar pentru orice metodă de plată
     const paymentMethodDisplay = payMethodNorm === 'ramburs' ? txt.paymentCashOnDelivery : payMethodNorm === 'card' || payMethodNorm === 'card online' ? txt.paymentCardOnline : payMethodNorm === 'rate' || payMethodNorm === 'plata in rate' || payMethodNorm === 'plată în rate' ? txt.paymentInstallments : payMethodNorm === 'transfer' || payMethodNorm === 'transfer bancar' ? txt.paymentBankTransfer : paymentMethod;
     
-    // Sumar simplificat - fără linii de reducere când sunt 0
-    let sumarHtml = `<div style='margin-bottom:8px;'>${txt.subtotalLabel}: <b>${summary.subtotal.toFixed(2)}</b> ${txt.currencyUnit}</div>`;
-    if (summary.totalCouponDiscount > 0) {
-      sumarHtml += `<div style='margin-bottom:8px;color:#2563eb;'>${txt.totalCouponDiscount}: <b>-${summary.totalCouponDiscount.toFixed(2)}</b> ${txt.currencyUnit}</div>`;
-      sumarHtml += `<div style='margin-bottom:8px;color:green;'>${txt.subtotalAfterDiscounts}: <b>${summary.subtotalDupaReduceri.toFixed(2)}</b> ${txt.currencyUnit}</div>`;
-    }
+    // Sumar în format tabel (similar cu pagina de confirmare preț)
+    let sumarHtml = `<table style="width:100%;border-collapse:collapse;margin-top:16px;">`;
+    
+    // Subtotal produse
+    sumarHtml += `<tr>
+      <td style="padding:8px 12px;text-align:right;border:1px solid #e5e7eb;">${txt.subtotalLabel}:</td>
+      <td style="padding:8px 12px;text-align:right;border:1px solid #e5e7eb;font-weight:600;">${summary.subtotalDupaReduceri.toFixed(2)} ${txt.currencyUnit}</td>
+    </tr>`;
+    
+    // Cost curier
+    sumarHtml += `<tr>
+      <td style="padding:8px 12px;text-align:right;border:1px solid #e5e7eb;">${txt.courierCostLabel}:</td>
+      <td style="padding:8px 12px;text-align:right;border:1px solid #e5e7eb;font-weight:600;">${summary.courierCost.toFixed(2)} ${txt.currencyUnit}</td>
+    </tr>`;
+    
+    // TVA
+    sumarHtml += `<tr>
+      <td style="padding:8px 12px;text-align:right;border:1px solid #e5e7eb;">${txt.vat} (${TVA_PERCENT}%):</td>
+      <td style="padding:8px 12px;text-align:right;border:1px solid #e5e7eb;font-weight:600;">${summary.tva.toFixed(2)} ${txt.currencyUnit}</td>
+    </tr>`;
+    
+    // TOTAL DE PLATĂ (cu TVA) - bold și evidențiat
+    sumarHtml += `<tr style="background:#f8fafc;">
+      <td style="padding:12px;text-align:right;border:1px solid #e5e7eb;font-weight:700;font-size:1.1em;">${txt.totalToPay}:</td>
+      <td style="padding:12px;text-align:right;border:1px solid #e5e7eb;font-weight:700;font-size:1.1em;color:#2563eb;">${summary.totalCuTVA.toFixed(2)} ${txt.currencyUnit}</td>
+    </tr>`;
+    
+    sumarHtml += `</table>`;
+    
+    // Informații livrare și plată sub tabel
     sumarHtml += `
-      <div style='margin-bottom:8px;'>${txt.courierCostLabel} (${deliveryType || ''}): <b>${summary.courierCost.toFixed(2)}</b> ${txt.currencyUnit}</div>
-      <div style='margin-bottom:8px;'>${txt.paymentMethodLabel}: <b>${paymentMethodDisplay}</b></div>
-      <div style='margin-bottom:8px;'>${txt.totalWithoutVAT}: <b>${summary.totalFaraTVA.toFixed(2)}</b> ${txt.currencyUnit}</div>
-      <div style='margin-bottom:8px;'>${txt.vat} (${TVA_PERCENT}%): <b>${summary.tva.toFixed(2)}</b> ${txt.currencyUnit}</div>
-      <div style='font-weight:700;font-size:1.15rem;margin-bottom:8px;color:#2563eb;'>${txt.totalToPay}: ${summary.totalCuTVA.toFixed(2)} ${txt.currencyUnit}</div>
-      <div style='margin-bottom:8px;'>${txt.deliveryAddress}: <b>${adresaLivrare}</b></div>
-      <div style='margin-bottom:8px;'>${txt.phoneLabel}: <b>${telefon}</b></div>
+      <div style='margin-top:16px;padding:12px;background:#f9fafb;border-radius:6px;'>
+        <div style='margin-bottom:8px;'>${txt.paymentMethodLabel}: <b>${paymentMethodDisplay}</b></div>
+        <div style='margin-bottom:8px;'>${txt.deliveryAddress}: <b>${adresaLivrare}</b></div>
+        <div>${txt.phoneLabel}: <b>${telefon}</b></div>
+      </div>
     `;
     // Unificare logică pentru toate metodele de plată
     let orderRecord = null;
@@ -465,11 +499,30 @@ export async function POST(req: NextRequest) {
         }
       }
     });
+    // Acordă puncte de fidelitate (1 punct la fiecare 10 RON)
+    if (orderRecord && user) {
+      const pointsEarned = Math.floor(totalCuTVA / 10);
+      if (pointsEarned > 0) {
+        await prisma.loyaltyPoints.create({
+          data: {
+            userId: user.id,
+            points: pointsEarned,
+            reason: "purchase",
+            orderId: orderRecord.id,
+          },
+        });
+        console.log(`[LOYALTY] +${pointsEarned} puncte pentru user ${user.id}, comanda ${orderRecord.id}`);
+      }
+    }
     // Email HTML complet - frazaPlata (caseta evidențiată) apare pentru orice metodă de plată, ca în imaginea 2
+    // Fraza prețuri orientative (banner vizibil)
+    const priceDisclaimerHtml = `<div style="background:#fef3c7;border:1px solid #f59e0b;padding:12px 18px;border-radius:6px;margin-bottom:18px;color:#92400e;font-size:1rem;"><strong>⚠️ ${txt.priceDisclaimer}</strong></div>`;
+    
     html += `
       <div style='padding:32px 32px 0 32px;'>
         <div style='font-size:1.15rem;font-weight:500;margin-bottom:8px;'>${txt.greeting}, <b>${client.denumire || client.name || ''}</b>!</div>
         <div style='font-size:1.05rem;color:#444;margin-bottom:18px;'>${txt.orderReceived}</div>
+        ${priceDisclaimerHtml}
         ${frazaPlata}
         ${tableHtml}
         ${sumarHtml}
@@ -483,6 +536,7 @@ export async function POST(req: NextRequest) {
     // Generează variantă plain text pentru email
     let text = `${txt.greeting}, ${(client.denumire || client.name || '').toString()}!\n`;
     text += `${txt.orderReceived}\n\n`;
+    text += `⚠️ ${txt.priceDisclaimer}\n\n`;
     if (paymentMethod === 'ramburs') {
       text += txt.paymentRamburs + '\n\n';
     } else if (paymentMethod === 'card') {
@@ -545,8 +599,8 @@ export async function POST(req: NextRequest) {
     // Subiect cu număr comandă pentru a nu fi grupate în Gmail
     const orderNumber = orderRecord?.number || orderRecord?.id || Date.now();
     const emailSubject = lang === 'en' 
-      ? `Order confirmation #${orderNumber} - PREV-COR TPM`
-      : `Confirmare comandă #${orderNumber} - PREV-COR TPM`;
+      ? `New order #${orderNumber} - PREV-COR TPM`
+      : `Comandă nouă #${orderNumber} - PREV-COR TPM`;
     
     // Send email with or without PDF attachment
     const emailOptions: Parameters<typeof sendEmail>[0] = {
@@ -566,16 +620,59 @@ export async function POST(req: NextRequest) {
     }
     
     await sendEmail(emailOptions);
-    // Trimite notificare push către admin
-    try {
-      await notifyNewOrder(
-        orderRecord?.number || String(orderRecord?.id) || 'N/A',
-        totalCuTVA,
-        client.denumire || client.name || userEmail
-      );
-    } catch (e) {
-      console.error('Eroare trimitere push notification:', e);
+    
+    // Trimite email notificare la admin (asincron, fără a bloca răspunsul)
+    const adminEmail = process.env.CONTACT_EMAIL || process.env.SMTP_USER;
+    if (adminEmail) {
+      const adminOrderUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/admin/orders?edit=${orderRecord?.id}`;
+      const adminHtml = `
+        <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">
+          <h2 style="color:#2563eb;">✅ Confirmare comandă #${orderNumber}</h2>
+          <p><strong>Client:</strong> ${client.denumire || client.name || userEmail}</p>
+          <p><strong>Email:</strong> ${userEmail}</p>
+          <p><strong>Telefon:</strong> ${telefon}</p>
+          <p><strong>Metodă plată:</strong> ${paymentMethodDisplay}</p>
+          <p><strong>Adresă:</strong> ${adresaLivrare}</p>
+          
+          <table style="width: 100%; border-collapse: collapse; margin-top: 16px;">
+            <tr>
+              <td style="padding: 8px 12px; text-align: right; border: 1px solid #e5e7eb;">Subtotal produse:</td>
+              <td style="padding: 8px 12px; text-align: right; border: 1px solid #e5e7eb; font-weight: 600;">${subtotalDupaReduceri.toFixed(2)} RON</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 12px; text-align: right; border: 1px solid #e5e7eb;">Cost curier:</td>
+              <td style="padding: 8px 12px; text-align: right; border: 1px solid #e5e7eb; font-weight: 600;">${courierCostVal.toFixed(2)} RON</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 12px; text-align: right; border: 1px solid #e5e7eb;">TVA (${TVA_PERCENT}%):</td>
+              <td style="padding: 8px 12px; text-align: right; border: 1px solid #e5e7eb; font-weight: 600;">${tva.toFixed(2)} RON</td>
+            </tr>
+            <tr style="background: #f8fafc;">
+              <td style="padding: 12px; text-align: right; border: 1px solid #e5e7eb; font-weight: 700;">TOTAL DE PLATĂ (cu TVA):</td>
+              <td style="padding: 12px; text-align: right; border: 1px solid #e5e7eb; font-weight: 700; color: #2563eb;">${totalCuTVA.toFixed(2)} RON</td>
+            </tr>
+          </table>
+          
+          <hr style="margin:20px 0;border:none;border-top:1px solid #e5e7eb;" />
+          <p style="color:#f59e0b;"><strong>⚠️ Prețurile sunt orientative - verifică și trimite oferta de preț clientului!</strong></p>
+          <p><a href="${adminOrderUrl}" style="display:inline-block;background:#2563eb;color:white;padding:10px 20px;text-decoration:none;border-radius:6px;">Vezi comenzile</a></p>
+        </div>
+      `;
+      // Fire and forget - nu blochează răspunsul
+      sendEmail({
+        to: adminEmail,
+        subject: `[CONFIRMARE COMANDĂ] #${orderNumber} - ${client.denumire || client.name || userEmail} - ${totalCuTVA.toFixed(2)} RON`,
+        html: adminHtml,
+        text: `Confirmare comandă #${orderNumber}\nClient: ${client.denumire || client.name || userEmail}\nSubtotal: ${subtotalDupaReduceri.toFixed(2)} RON\nCurier: ${courierCostVal.toFixed(2)} RON\nTVA (${TVA_PERCENT}%): ${tva.toFixed(2)} RON\nTotal: ${totalCuTVA.toFixed(2)} RON\nVerifică și trimite oferta de preț!`
+      }).then(() => console.log('[ORDER-COMPLETE] Email admin trimis')).catch(err => console.error('[ORDER-COMPLETE] Eroare email admin:', err));
     }
+    
+    // Trimite notificare push către admin (asincron)
+    notifyNewOrder(
+      orderRecord?.number || String(orderRecord?.id) || 'N/A',
+      totalCuTVA,
+      client.denumire || client.name || userEmail
+    ).catch(e => console.error('Eroare trimitere push notification:', e));
     // Marchează coșul abandonat ca recuperat
     try {
       await (prisma as any).abandonedCart.updateMany({

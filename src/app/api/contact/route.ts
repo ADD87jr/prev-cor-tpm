@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sendEmail } from "../send-email";
+import { sendEmail } from "@/app/utils/email";
 import { generateContactFormPdfBuffer } from "../../utils/contactFormPdf";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { sanitizeInput, sanitizeName, sanitizeEmail } from "@/lib/sanitize";
@@ -47,16 +47,34 @@ export async function POST(req: NextRequest) {
       return new Response(JSON.stringify({ error: "Adresa de email este invalidă." }), { status: 400 });
     }
 
-    const subject = `Cerere contact de la ${cleanPrenume} ${cleanNume}`;
+    const subject = `Cerere ofertă de la ${cleanPrenume} ${cleanNume}`;
     const html = `
-      <h2>Formular Contact Website</h2>
-      <p><b>Nume:</b> ${cleanPrenume} ${cleanNume}</p>
-      <p><b>Email:</b> ${cleanEmail}</p>
-      <p><b>Companie:</b> ${cleanCompanie}</p>
-      <p><b>Serviciu dorit:</b> ${cleanServiciu}</p>
-      <p><b>Mesaj:</b><br/>${cleanMesaj.replace(/\n/g, '<br/>')}</p>
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #1a56db; border-bottom: 2px solid #1a56db; padding-bottom: 10px;">📬 Cerere Ofertă - Website</h2>
+        
+        <div style="background: #f3f4f6; padding: 15px; border-radius: 8px; margin: 15px 0;">
+          <h3 style="margin: 0 0 10px 0; color: #374151;">👤 Date solicitant</h3>
+          <p style="margin: 5px 0;"><b>Nume:</b> ${cleanPrenume} ${cleanNume}</p>
+          <p style="margin: 5px 0;"><b>Email:</b> <a href="mailto:${cleanEmail}">${cleanEmail}</a></p>
+          <p style="margin: 5px 0;"><b>Companie:</b> ${cleanCompanie}</p>
+        </div>
+        
+        <div style="background: #fef3c7; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #f59e0b;">
+          <h3 style="margin: 0 0 10px 0; color: #92400e;">📋 Solicitare</h3>
+          <p style="margin: 5px 0;"><b>Serviciu:</b> ${cleanServiciu}</p>
+        </div>
+        
+        <div style="background: #fff; padding: 15px; border: 1px solid #e5e7eb; border-radius: 8px; margin: 15px 0;">
+          <h3 style="margin: 0 0 10px 0; color: #374151;">💬 Detalii solicitare</h3>
+          <div style="white-space: pre-line; color: #4b5563;">${cleanMesaj}</div>
+        </div>
+        
+        <p style="font-size: 12px; color: #9ca3af; text-align: center; margin-top: 20px;">
+          Acest mesaj a fost trimis automat de pe website-ul PREV-COR TPM.
+        </p>
+      </div>
     `;
-    const text = `Formular Contact Website\nNume: ${cleanPrenume} ${cleanNume}\nEmail: ${cleanEmail}\nCompanie: ${cleanCompanie}\nServiciu dorit: ${cleanServiciu}\nMesaj:\n${cleanMesaj}`;
+    const text = `Cerere Ofertă - Website\n\nNume: ${cleanPrenume} ${cleanNume}\nEmail: ${cleanEmail}\nCompanie: ${cleanCompanie}\n\nServiciu: ${cleanServiciu}\n\nDetalii:\n${cleanMesaj}`;
 
     // Generează PDF cu datele formularului
     let pdfBuffer: Buffer;
@@ -77,7 +95,7 @@ export async function POST(req: NextRequest) {
 
     try {
       await sendEmail({
-        to: process.env.CONTACT_EMAIL || "office@prev-cor-tpm.ro",
+        to: process.env.CONTACT_EMAIL || "office@prevcortpm.ro",
         subject,
         text,
         html,

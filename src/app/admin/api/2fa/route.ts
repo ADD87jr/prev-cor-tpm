@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
     if (action === "setup") {
       // Generate new secret for setup
       const secret = generateTOTPSecret();
-      const uri = generateTOTPUri(secret, "admin@prev-cor-tpm.ro");
+      const uri = generateTOTPUri(secret, "admin@prevcortpm.ro");
       
       // Generate QR code as base64 image
       const qrCodeDataUrl = await QRCode.toDataURL(uri);

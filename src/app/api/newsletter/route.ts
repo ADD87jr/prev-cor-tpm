@@ -66,11 +66,13 @@ export async function POST(req: NextRequest) {
 
     // Trimite email de bun venit
     try {
+      const siteUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://prevcortpm.ro';
+      const unsubscribeUrl = `${siteUrl}/api/newsletter/unsubscribe?email=${encodeURIComponent(email.toLowerCase().trim())}`;
       await sendEmail({
         to: email,
         subject: 'Bun venit la newsletterul PREV-COR TPM!',
-        text: `Salut${name ? ' ' + name : ''}!\n\nÎți mulțumim că te-ai abonat la newsletterul nostru. Vei primi periodic noutăți, oferte și informații utile.\n\nDacă nu ai cerut această abonare, poți ignora acest mesaj.\n\nEchipa PREV-COR TPM`,
-        html: `<div style='font-family:sans-serif;max-width:600px;margin:0 auto;background:#fff;border-radius:8px;padding:24px;border:1px solid #e5e7eb;'><h2 style='color:#2563eb;'>Bun venit la newsletterul PREV-COR TPM!</h2><p>Salut${name ? ' <b>' + name + '</b>' : ''}!<br><br>Îți mulțumim că te-ai abonat la newsletterul nostru.<br>Vei primi periodic noutăți, oferte și informații utile.<br><br>Dacă nu ai cerut această abonare, poți ignora acest mesaj.<br><br><span style='color:#2563eb;font-weight:600;'>Echipa PREV-COR TPM</span></p></div>`
+        text: `Salut${name ? ' ' + name : ''}!\n\nÎți mulțumim că te-ai abonat la newsletterul nostru. Vei primi periodic noutăți, oferte și informații utile.\n\nDacă nu ai cerut această abonare, poți ignora acest mesaj.\n\nPentru dezabonare: ${unsubscribeUrl}\n\nEchipa PREV-COR TPM`,
+        html: `<div style='font-family:sans-serif;max-width:600px;margin:0 auto;background:#fff;border-radius:8px;padding:24px;border:1px solid #e5e7eb;'><h2 style='color:#2563eb;'>Bun venit la newsletterul PREV-COR TPM!</h2><p>Salut${name ? ' <b>' + name + '</b>' : ''}!<br><br>Îți mulțumim că te-ai abonat la newsletterul nostru.<br>Vei primi periodic noutăți, oferte și informații utile.<br><br>Dacă nu ai cerut această abonare, poți ignora acest mesaj.<br><br><span style='color:#2563eb;font-weight:600;'>Echipa PREV-COR TPM</span></p><hr style='margin:20px 0;border:none;border-top:1px solid #e5e7eb;'/><p style='font-size:12px;color:#9ca3af;text-align:center;'>Nu mai dorești să primești emailuri? <a href='${unsubscribeUrl}' style='color:#6b7280;text-decoration:underline;'>Dezabonează-te aici</a></p></div>`
       });
     } catch (e) {
       console.error('[NEWSLETTER] Eroare la trimitere email confirmare:', e);

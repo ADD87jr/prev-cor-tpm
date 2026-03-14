@@ -1,11 +1,16 @@
 import { sendEmail } from "./email";
+import { getCartSettings } from "@/lib/getTvaPercent";
 
 const statusLabels: Record<string, string> = {
   pending: "În așteptare",
   confirmed: "Confirmată",
   processing: "În procesare",
   shipped: "Expediată",
+  expediată: "Expediată",
   delivered: "Livrată",
+  livrată: "Livrată",
+  procesată: "Procesată",
+  nouă: "Nouă",
   cancelled: "Anulată",
 };
 
@@ -14,7 +19,11 @@ const statusEmojis: Record<string, string> = {
   confirmed: "✅",
   processing: "🔧",
   shipped: "📦",
+  expediată: "📦",
   delivered: "🎉",
+  livrată: "🎉",
+  procesată: "🔧",
+  nouă: "🆕",
   cancelled: "❌",
 };
 
@@ -28,6 +37,8 @@ interface OrderStatusEmailData {
   trackingUrl?: string;
   items?: Array<{ name: string; quantity: number; price: number }>;
   total?: number;
+  courierCost?: number;
+  tvaPercent?: number;
 }
 
 export async function sendOrderStatusEmail(data: OrderStatusEmailData) {
@@ -41,7 +52,13 @@ export async function sendOrderStatusEmail(data: OrderStatusEmailData) {
     trackingUrl,
     items,
     total,
+    courierCost = 0,
+    tvaPercent,
   } = data;
+
+  // Citește setările de coș pentru TVA dacă nu e specificat
+  const cartSettings = await getCartSettings();
+  const TVA_PERCENT = tvaPercent ?? cartSettings.tva;
 
   const statusLabel = statusLabels[newStatus] || newStatus;
   const emoji = statusEmojis[newStatus] || "📋";
@@ -49,7 +66,7 @@ export async function sendOrderStatusEmail(data: OrderStatusEmailData) {
   const subject = `${emoji} Comanda #${orderNumber} - ${statusLabel}`;
 
   let trackingInfo = "";
-  if (newStatus === "shipped" && awb) {
+  if ((newStatus === "shipped" || newStatus === "expediată") && awb) {
     trackingInfo = `
       <div style="background: #e8f5e9; padding: 16px; border-radius: 8px; margin: 16px 0;">
         <h3 style="margin: 0 0 8px 0; color: #2e7d32;">📦 Informații expediere</h3>
@@ -62,35 +79,55 @@ export async function sendOrderStatusEmail(data: OrderStatusEmailData) {
 
   let itemsList = "";
   if (items && items.length > 0) {
+    // Calcul subtotal produse
+    const subtotalProduse = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+    const courierVal = typeof courierCost === 'number' ? courierCost : 0;
+    // Prețurile sunt FĂRĂ TVA - adăugăm TVA la final
+    const subtotalFaraTVA = subtotalProduse + courierVal;
+    const tvaValue = subtotalFaraTVA * (TVA_PERCENT / 100);
+    const totalCuTVA = subtotalFaraTVA + tvaValue;
+
     const itemsHtml = items.map(i => `
       <tr>
-        <td style="padding: 8px; border-bottom: 1px solid #eee;">${i.name}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">${i.quantity}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">${i.price} RON</td>
+        <td style="padding: 8px 12px; border: 1px solid #e5e7eb;">${i.name}</td>
+        <td style="padding: 8px 12px; border: 1px solid #e5e7eb; text-align: center;">${i.quantity}</td>
+        <td style="padding: 8px 12px; border: 1px solid #e5e7eb; text-align: right;">${i.price.toFixed(2)} RON</td>
+        <td style="padding: 8px 12px; border: 1px solid #e5e7eb; text-align: right;">${(i.price * i.quantity).toFixed(2)} RON</td>
       </tr>
     `).join("");
 
     itemsList = `
-      <h3 style="margin: 20px 0 10px 0;">Produse comandate:</h3>
-      <table style="width: 100%; border-collapse: collapse;">
+      <table style="width: 100%; border-collapse: collapse; margin-top: 16px;">
         <thead>
-          <tr style="background: #f5f5f5;">
-            <th style="padding: 8px; text-align: left;">Produs</th>
-            <th style="padding: 8px; text-align: center;">Cantitate</th>
-            <th style="padding: 8px; text-align: right;">Preț</th>
+          <tr style="background: #f3f4f6;">
+            <th style="padding: 8px 12px; text-align: left; border: 1px solid #e5e7eb; font-weight: 600;">Produs</th>
+            <th style="padding: 8px 12px; text-align: center; border: 1px solid #e5e7eb; font-weight: 600;">Cant.</th>
+            <th style="padding: 8px 12px; text-align: right; border: 1px solid #e5e7eb; font-weight: 600;">Preț (fără TVA)</th>
+            <th style="padding: 8px 12px; text-align: right; border: 1px solid #e5e7eb; font-weight: 600;">Total</th>
           </tr>
         </thead>
         <tbody>
           ${itemsHtml}
         </tbody>
-        ${total ? `
-          <tfoot>
-            <tr>
-              <td colspan="2" style="padding: 8px; font-weight: bold; text-align: right;">Total:</td>
-              <td style="padding: 8px; font-weight: bold; text-align: right;">${total} RON</td>
-            </tr>
-          </tfoot>
-        ` : ""}
+      </table>
+      
+      <table style="width: 100%; border-collapse: collapse; margin-top: 0;">
+        <tr>
+          <td style="padding: 8px 12px; text-align: right; border: 1px solid #e5e7eb;">Subtotal produse:</td>
+          <td style="padding: 8px 12px; text-align: right; border: 1px solid #e5e7eb; font-weight: 600;">${subtotalProduse.toFixed(2)} RON</td>
+        </tr>
+        ${courierVal > 0 ? `<tr>
+          <td style="padding: 8px 12px; text-align: right; border: 1px solid #e5e7eb;">Cost curier:</td>
+          <td style="padding: 8px 12px; text-align: right; border: 1px solid #e5e7eb; font-weight: 600;">${courierVal.toFixed(2)} RON</td>
+        </tr>` : ''}
+        <tr>
+          <td style="padding: 8px 12px; text-align: right; border: 1px solid #e5e7eb;">TVA (${TVA_PERCENT}%):</td>
+          <td style="padding: 8px 12px; text-align: right; border: 1px solid #e5e7eb; font-weight: 600;">${tvaValue.toFixed(2)} RON</td>
+        </tr>
+        <tr style="background: #f8fafc;">
+          <td style="padding: 12px; text-align: right; border: 1px solid #e5e7eb; font-weight: 700; font-size: 1.1em;">TOTAL DE PLATĂ (cu TVA):</td>
+          <td style="padding: 12px; text-align: right; border: 1px solid #e5e7eb; font-weight: 700; font-size: 1.1em; color: #2563eb;">${totalCuTVA.toFixed(2)} RON</td>
+        </tr>
       </table>
     `;
   }

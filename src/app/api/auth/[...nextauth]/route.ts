@@ -8,8 +8,16 @@ import bcrypt from "bcryptjs";
 
 import type { AuthOptions } from "next-auth";
 
+// Ensure NEXTAUTH_SECRET is available (required for production)
+const secret = process.env.NEXTAUTH_SECRET || (
+  process.env.NODE_ENV === "development" 
+    ? "development-secret-key-not-for-production" 
+    : undefined
+);
+
 const authOptions: AuthOptions = {
-  secret: process.env.NEXTAUTH_SECRET,
+  secret,
+  debug: process.env.NODE_ENV === "development",
   providers: [
     // Google OAuth
     GoogleProvider({
@@ -30,16 +38,21 @@ const authOptions: AuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
-        // Caută userul în baza de date Prisma
-        const user = await prisma.user.findUnique({ where: { email: credentials.email } });
-        if (!user || !user.password || user.blocked) return null;
-        
-        // Compară parola cu hash-ul din baza de date
-        const isValid = await bcrypt.compare(credentials.password, user.password);
-        if (isValid) {
-          return { id: user.id.toString(), name: user.name, email: user.email, isAdmin: user.isAdmin };
+        try {
+          // Caută userul în baza de date Prisma
+          const user = await prisma.user.findUnique({ where: { email: credentials.email } });
+          if (!user || !user.password || user.blocked) return null;
+          
+          // Compară parola cu hash-ul din baza de date
+          const isValid = await bcrypt.compare(credentials.password, user.password);
+          if (isValid) {
+            return { id: user.id.toString(), name: user.name, email: user.email, isAdmin: user.isAdmin };
+          }
+          return null;
+        } catch (error) {
+          console.error("[NextAuth] Database error in authorize:", error);
+          return null;
         }
-        return null;
       }
     })
   ],
@@ -50,23 +63,28 @@ const authOptions: AuthOptions = {
         const email = user.email;
         if (!email) return false;
         
-        // Verifică dacă userul există deja
-        let dbUser = await prisma.user.findUnique({ where: { email } });
-        
-        if (!dbUser) {
-          // Creează user nou pentru OAuth
-          dbUser = await prisma.user.create({
-            data: {
-              email,
-              name: user.name || email.split("@")[0],
-              password: "", // OAuth users nu au parolă
-              blocked: false,
-              isAdmin: false
-            }
-          });
+        try {
+          // Verifică dacă userul există deja
+          let dbUser = await prisma.user.findUnique({ where: { email } });
+          
+          if (!dbUser) {
+            // Creează user nou pentru OAuth
+            dbUser = await prisma.user.create({
+              data: {
+                email,
+                name: user.name || email.split("@")[0],
+                password: "", // OAuth users nu au parolă
+                blocked: false,
+                isAdmin: false
+              }
+            });
+          }
+          
+          return !dbUser.blocked;
+        } catch (error) {
+          console.error("[NextAuth] Database error in signIn callback:", error);
+          return false;
         }
-        
-        return !dbUser.blocked;
       }
       return true;
     },

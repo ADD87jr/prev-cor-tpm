@@ -1,0 +1,90 @@
+[
+  {
+    "id": 1,
+    "productId": 1,
+    "variantId": 1,
+    "oldPrice": 152.1,
+    "newPrice": 78.3,
+    "oldListPrice": 169,
+    "newListPrice": 87,
+    "changedBy": "admin",
+    "createdAt": "2026-03-07T18:11:05.515+00:00"
+  },
+  {
+    "id": 2,
+    "productId": 1,
+    "variantId": 2,
+    "oldPrice": 152.1,
+    "newPrice": 97.2,
+    "oldListPrice": 169,
+    "newListPrice": 108,
+    "changedBy": "admin",
+    "createdAt": "2026-03-07T18:12:35.992+00:00"
+  },
+  {
+    "id": 3,
+    "productId": 1,
+    "variantId": 4,
+    "oldPrice": 152.1,
+    "newPrice": 97.2,
+    "oldListPrice": 169,
+    "newListPrice": 108,
+    "changedBy": "admin",
+    "createdAt": "2026-03-07T18:14:56.927+00:00"
+  },
+  {
+    "id": 4,
+    "productId": 1,
+    "variantId": null,
+    "oldPrice": 152.1,
+    "newPrice": 97.2,
+    "oldListPrice": 169,
+    "newListPrice": 108,
+    "changedBy": "admin",
+    "createdAt": "2026-03-07T18:17:53.112+00:00"
+  },
+  {
+    "id": 5,
+    "productId": 2,
+    "variantId": null,
+    "oldPrice": 293,
+    "newPrice": 268.85,
+    "oldListPrice": 290,
+    "newListPrice": 298.72,
+    "changedBy": "admin",
+    "createdAt": "2026-03-07T18:34:34.133+00:00"
+  },
+  {
+    "id": 6,
+    "productId": 3,
+    "variantId": null,
+    "oldPrice": 96.3,
+    "newPrice": 90.77,
+    "oldListPrice": 107,
+    "newListPrice": 100.86,
+    "changedBy": "admin",
+    "createdAt": "2026-03-07T18:36:22.140+00:00"
+  },
+  {
+    "id": 7,
+    "productId": 4,
+    "variantId": null,
+    "oldPrice": 187,
+    "newPrice": 171.2,
+    "oldListPrice": 189.99,
+    "newListPrice": 190.22,
+    "changedBy": "admin",
+    "createdAt": "2026-03-07T18:38:54.353+00:00"
+  },
+  {
+    "id": 8,
+    "productId": 5,
+    "variantId": null,
+    "oldPrice": 78,
+    "newPrice": 69.36,
+    "oldListPrice": 80,
+    "newListPrice": 77.07,
+    "changedBy": "admin",
+    "createdAt": "2026-03-07T18:40:27.989+00:00"
+  }
+]

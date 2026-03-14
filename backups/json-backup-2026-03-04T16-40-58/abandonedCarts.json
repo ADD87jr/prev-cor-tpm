@@ -1,0 +1,59 @@
+[
+  {
+    "id": 1,
+    "email": "office@prevcortpm.ro",
+    "phone": "",
+    "items": [
+      {
+        "id": 1,
+        "name": "Senzori inductivi - Seria PA (ø3mm)",
+        "price": 412.95,
+        "quantity": 1
+      }
+    ],
+    "total": 531.1295,
+    "createdAt": "2026-03-03T15:30:08.830Z",
+    "updatedAt": "2026-03-03T15:30:08.830Z",
+    "emailSent": false,
+    "emailSentAt": null,
+    "recovered": true
+  },
+  {
+    "id": 12,
+    "email": "dan_alexescu@yahoo.com",
+    "phone": "0735623509",
+    "items": [
+      {
+        "id": 2,
+        "name": "Senzor fotoelectric difuz M18 Autonics BR200-DDTN-C-P",
+        "price": 263.7,
+        "quantity": 1
+      }
+    ],
+    "total": 350.537,
+    "createdAt": "2026-03-03T15:32:10.060Z",
+    "updatedAt": "2026-03-03T15:32:10.060Z",
+    "emailSent": false,
+    "emailSentAt": null,
+    "recovered": true
+  },
+  {
+    "id": 13,
+    "email": "dan_alexescu@yahoo.com",
+    "phone": "",
+    "items": [
+      {
+        "id": 5,
+        "name": "Buton de urgență ciupercă Ø40mm ABB CE4T-10R-02",
+        "price": 70.2,
+        "quantity": 1
+      }
+    ],
+    "total": 116.402,
+    "createdAt": "2026-03-03T15:48:36.020Z",
+    "updatedAt": "2026-03-03T15:48:36.020Z",
+    "emailSent": false,
+    "emailSentAt": null,
+    "recovered": true
+  }
+]

@@ -21,15 +21,10 @@ interface ProductJsonLdProps {
 }
 
 export default function ProductJsonLd({ product, reviews }: ProductJsonLdProps) {
-  const baseUrl = typeof window !== "undefined" ? window.location.origin : "https://prev-cor.ro";
+  const baseUrl = typeof window !== "undefined" ? window.location.origin : "https://prevcortpm.ro";
   
-  // Calculează prețul cu discount dacă există
-  let finalPrice = product.price;
-  if (product.discount && product.discountType === "percent") {
-    finalPrice = product.price * (1 - product.discount / 100);
-  } else if (product.discount && product.discountType === "fixed") {
-    finalPrice = product.price - product.discount;
-  }
+  // product.price este deja prețul final cu discount aplicat
+  const finalPrice = product.price;
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -86,8 +81,8 @@ export function OrganizationJsonLd() {
     "@context": "https://schema.org",
     "@type": "Organization",
     name: "PREV-COR TPM",
-    url: "https://prev-cor.ro",
-    logo: "https://prev-cor.ro/logo.png",
+    url: "https://prevcortpm.ro",
+    logo: "https://prevcortpm.ro/logo.png",
     description: "Soluții complete pentru echipamente electrice și automatizări industriale",
     address: {
       "@type": "PostalAddress",
@@ -117,7 +112,7 @@ interface BreadcrumbItem {
 }
 
 export function BreadcrumbJsonLd({ items }: { items: BreadcrumbItem[] }) {
-  const baseUrl = typeof window !== "undefined" ? window.location.origin : "https://prev-cor.ro";
+  const baseUrl = typeof window !== "undefined" ? window.location.origin : "https://prevcortpm.ro";
   
   const jsonLd = {
     "@context": "https://schema.org",

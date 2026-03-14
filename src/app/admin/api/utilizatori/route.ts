@@ -4,7 +4,6 @@ import bcrypt from "bcryptjs";
 import { adminAuthMiddleware } from "@/lib/auth-middleware";
 import { auditDataChange } from "@/lib/audit-logger";
 import { getClientIp } from "@/lib/rate-limit";
-import { verifyCsrfMiddleware } from "@/lib/csrf-token";
 
 // GET - lista utilizatori
 export async function GET(req: NextRequest) {
@@ -26,18 +25,9 @@ export async function GET(req: NextRequest) {
 
 // PUT - update utilizator (isAdmin, blocked, password)
 export async function PUT(req: NextRequest) {
-  // Protejare autentificare
+  // Protejare autentificare (cookie adminSession cu sameSite: lax)
   const authError = await adminAuthMiddleware(req);
   if (authError) return authError;
-
-  // Protejare CSRF
-  const csrfError = await verifyCsrfMiddleware(req, "admin");
-  if (!csrfError.valid) {
-    return NextResponse.json(
-      { error: csrfError.error || "CSRF validation failed" },
-      { status: 403 }
-    );
-  }
 
   try {
     const { id, isAdmin, blocked, newPassword } = await req.json();
@@ -82,18 +72,9 @@ export async function PUT(req: NextRequest) {
 
 // DELETE - șterge utilizator
 export async function DELETE(req: NextRequest) {
-  // Protejare autentificare
+  // Protejare autentificare (cookie adminSession cu sameSite: lax)
   const authError = await adminAuthMiddleware(req);
   if (authError) return authError;
-
-  // Protejare CSRF
-  const csrfError = await verifyCsrfMiddleware(req, "admin");
-  if (!csrfError.valid) {
-    return NextResponse.json(
-      { error: csrfError.error || "CSRF validation failed" },
-      { status: 403 }
-    );
-  }
 
   try {
     const { searchParams } = new URL(req.url);

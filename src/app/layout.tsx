@@ -17,6 +17,9 @@ import { LanguageProvider } from "./_components/LanguageContext";
 import LiveChatWidget from "./_components/LiveChatWidget";
 import MaintenanceWrapper from "./_components/MaintenanceWrapper";
 import SentryProvider from "./_components/SentryProvider";
+import WebVitals from "./_components/WebVitals";
+import BackToTop from "./_components/BackToTop";
+import AIChatbot from "./_components/AIChatbot";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -67,7 +70,7 @@ export const metadata: Metadata = {
     },
   },
   verification: {
-    google: "your-google-verification-code", // Înlocuiește cu codul real
+    google: process.env.GOOGLE_VERIFICATION_CODE || "",
   },
 };
 
@@ -78,10 +81,51 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ro">
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Organization",
+              name: "S.C. PREV-COR TPM S.R.L.",
+              url: "https://prevcortpm.ro",
+              logo: "https://prevcortpm.ro/logo.png",
+              description: "Soluții complete de automatizare industrială: consultanță, proiectare, instalare și mentenanță. Magazin online cu livrare rapidă în toată România.",
+              telephone: "+40732935623",
+              email: "office@prevcortpm.ro",
+              address: {
+                "@type": "PostalAddress",
+                streetAddress: "Str. Principala, Nr. 70",
+                addressLocality: "Stroesti",
+                addressRegion: "Mehedinti",
+                postalCode: "227208",
+                addressCountry: "RO",
+              },
+              sameAs: [],
+              contactPoint: {
+                "@type": "ContactPoint",
+                telephone: "+40732935623",
+                contactType: "customer service",
+                availableLanguage: ["Romanian", "English"],
+              },
+            }),
+          }}
+        />
+        {process.env.NEXT_PUBLIC_CLARITY_ID && (
+          <script
+            id="microsoft-clarity"
+            dangerouslySetInnerHTML={{
+              __html: `(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y)})(window,document,"clarity","script","${process.env.NEXT_PUBLIC_CLARITY_ID}");`,
+            }}
+          />
+        )}
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <GoogleAnalytics />
+        <WebVitals />
         <NextAuthProvider>
           <LanguageProvider>
             <WishlistProvider>
@@ -96,6 +140,8 @@ export default function RootLayout({
                       <CompareBar />
                       <CookieConsent />
                       <LiveChatWidget />
+                      <AIChatbot />
+                      <BackToTop />
                     </MaintenanceWrapper>
                     </SentryProvider>
                   </RecentlyViewedProvider>

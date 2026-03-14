@@ -45,6 +45,10 @@ export default function AdminPanel() {
       <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-sm">
         <h1 className="text-2xl font-bold mb-6 text-center">Admin Login</h1>
         
+        {/* Câmpuri ascunse care absorb autofill-ul browserului */}
+        <input type="text" name="prevent_autofill_user" autoComplete="username" className="hidden" tabIndex={-1} aria-hidden="true" />
+        <input type="password" name="prevent_autofill_pass" autoComplete="current-password" className="hidden" tabIndex={-1} aria-hidden="true" />
+        
         <input
           type="password"
           placeholder="Parolă admin"
@@ -54,6 +58,7 @@ export default function AdminPanel() {
           className="w-full border rounded px-4 py-2 mb-4"
           disabled={loading || needs2FA}
           autoComplete="off"
+          suppressHydrationWarning
         />
         
         {needs2FA && (

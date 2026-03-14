@@ -1,0 +1,22 @@
+﻿npx : Environment variables loaded from .env
+At line:1 char:1
++ npx prisma db push 2>&1 | Out-File -FilePath db-push.txt -Encoding ut ...
++ ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Environment variables loaded from 
+    .env:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Prisma schema loaded from prisma\schema.prisma
+Datasource "db": SQLite database "dev.db" at "file:./dev.db"
+
+The database is already in sync with the Prisma schema.
+
+Running generate... (Use --skip-generate to skip the generators)
+warn Preview feature "driverAdapters" is deprecated. The functionality can be 
+used without specifying it as a preview feature.
+[2K[1A[2K[GRunning generate... - Prisma Client
+[2K[1A[2K[GEPERM: operation not permitted, rename 'C:\Users\Dan\Desktop\backup_magazin_full
+_2026-03-01\node_modules\.prisma\client\query_engine-windows.dll.node.tmp17636' 
+-> 'C:\Users\Dan\Desktop\backup_magazin_full_2026-03-01\node_modules\.prisma\cli
+ent\query_engine-windows.dll.node'
+

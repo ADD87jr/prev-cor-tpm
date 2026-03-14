@@ -1,0 +1,43 @@
+﻿[dotenv@17.2.4] injecting env (21) from .env.local -- tip: Γ£à audit secrets and track compliance: https://dotenvx.com/ops
+≡ƒôí Conectare la Turso: libsql://prevcortpm-add87jr.aws-eu-west-1.turso.io
+≡ƒöº Seed PLC Configurator...
+
+≡ƒôª Creare brand-uri...
+   Γ£à 3 brand-uri create
+
+≡ƒôé Creare categorii...
+   Γ£à 5 categorii create
+
+≡ƒö⌐ Creare op╚¢iuni...
+node : Γ¥î Eroare seed: PrismaClientUnknownRequestError: 
+At line:1 char:1
++ node scripts/seed-configurator.js 2>&1 | Out-File -FilePath seed-resu ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Γ¥î Eroare seed...nRequestError:  
+   :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Invalid `prisma.configuratorOption.upsert()` invocation in
+C:\Users\Dan\Desktop\backup_magazin_full_2026-03-01\scripts\seed-configurator.j
+s:169:53
+
+  166 
+  167 const createdOptions = [];
+  168 for (const opt of allOptions) {
+ΓåÆ 169   const created = await prisma.configuratorOption.upsert(
+Error occurred during query execution:
+ConnectorError(ConnectorError { user_facing_error: None, kind: 
+QueryError(SqliteError { extended_code: 1, message: Some("SQLITE_CONSTRAINT: 
+SQLite error: FOREIGN KEY constraint failed") }), transient: false })
+    at ei.handleRequestError (C:\Users\Dan\Desktop\backup_magazin_full_2026-03-
+01\node_modules\@prisma\client\runtime\library.js:121:7458)
+    at ei.handleAndLogRequestError (C:\Users\Dan\Desktop\backup_magazin_full_20
+26-03-01\node_modules\@prisma\client\runtime\library.js:121:6593)
+    at ei.request (C:\Users\Dan\Desktop\backup_magazin_full_2026-03-01\node_mod
+ules\@prisma\client\runtime\library.js:121:6300)
+    at async a (C:\Users\Dan\Desktop\backup_magazin_full_2026-03-01\node_module
+s\@prisma\client\runtime\library.js:130:9551)
+    at async main (C:\Users\Dan\Desktop\backup_magazin_full_2026-03-01\scripts\
+seed-configurator.js:169:21) {
+  clientVersion: '6.19.2'
+}

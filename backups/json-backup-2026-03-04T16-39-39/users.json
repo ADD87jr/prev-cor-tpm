@@ -1,0 +1,18 @@
+[
+  {
+    "id": 1,
+    "email": "office.prevcortpm@gmail.com",
+    "password": "wd51zz9o",
+    "name": "office.prevcortpm@gmail.com",
+    "blocked": false,
+    "isAdmin": false
+  },
+  {
+    "id": 2,
+    "email": "dan_alexescu@yahoo.com",
+    "password": "iolcsm3j",
+    "name": "dan_alexescu@yahoo.com",
+    "blocked": false,
+    "isAdmin": false
+  }
+]

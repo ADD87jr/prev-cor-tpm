@@ -490,6 +490,81 @@ export default function SalesDashboard({ products, orders, cheltuieli = [] }: { 
         </ResponsiveContainer>
       </div>
       <OrderDetailsModal open={modalOpen} onClose={() => setModalOpen(false)} orders={modalOrders} title={modalTitle} />
+      
+      {/* Top Produse Vândute */}
+      <div className="bg-white rounded-lg shadow p-4">
+        <h3 className="font-bold text-lg mb-3">🏆 Top 10 Produse Vândute</h3>
+        {(() => {
+          const productSales: Record<string, { name: string; qty: number; revenue: number }> = {};
+          orders.forEach((o: any) => {
+            if (!o.items) return;
+            (Array.isArray(o.items) ? o.items : []).forEach((item: any) => {
+              const key = String(item.id || item.name);
+              if (!productSales[key]) productSales[key] = { name: item.name || "Produs", qty: 0, revenue: 0 };
+              productSales[key].qty += Number(item.quantity || item.qty || 1);
+              productSales[key].revenue += (Number(item.price) || 0) * Number(item.quantity || item.qty || 1);
+            });
+          });
+          const sorted = Object.values(productSales).sort((a, b) => b.revenue - a.revenue).slice(0, 10);
+          if (sorted.length === 0) return <p className="text-gray-400 text-sm">Nu există date.</p>;
+          const maxRevenue = sorted[0]?.revenue || 1;
+          return (
+            <div className="space-y-2">
+              {sorted.map((p, i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <span className="w-6 text-right font-bold text-gray-400 text-sm">{i + 1}.</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium truncate" title={p.name}>{p.name}</span>
+                      <span className="text-xs text-gray-400 whitespace-nowrap">{p.qty} buc</span>
+                    </div>
+                    <div className="bg-gray-100 rounded-full h-2 mt-1 overflow-hidden">
+                      <div className="bg-blue-500 h-full rounded-full" style={{ width: `${(p.revenue / maxRevenue) * 100}%` }} />
+                    </div>
+                  </div>
+                  <span className="text-sm font-bold text-blue-600 whitespace-nowrap w-24 text-right">
+                    {p.revenue.toLocaleString("ro-RO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} RON
+                  </span>
+                </div>
+              ))}
+            </div>
+          );
+        })()}
+      </div>
+
+      {/* Rata de Conversie & Metrici */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-white rounded-lg shadow p-4 text-center">
+          <div className="text-sm text-gray-500 mb-1">Valoare medie comandă</div>
+          <div className="text-2xl font-bold text-blue-600">
+            {orders.length > 0
+              ? (orders.reduce((s: number, o: any) => s + (o.total || 0), 0) / orders.length).toLocaleString("ro-RO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+              : "0.00"} RON
+          </div>
+        </div>
+        <div className="bg-white rounded-lg shadow p-4 text-center">
+          <div className="text-sm text-gray-500 mb-1">Rata livrare (din total)</div>
+          <div className="text-2xl font-bold text-green-600">
+            {orders.length > 0
+              ? Math.round((orders.filter((o: any) => o.status === "livrată").length / orders.length) * 100)
+              : 0}%
+          </div>
+          <div className="text-xs text-gray-400">{orders.filter((o: any) => o.status === "livrată").length} din {orders.length} comenzi</div>
+        </div>
+        <div className="bg-white rounded-lg shadow p-4 text-center">
+          <div className="text-sm text-gray-500 mb-1">Număr produse unice vândute</div>
+          <div className="text-2xl font-bold text-purple-600">
+            {(() => {
+              const ids = new Set<string>();
+              orders.forEach((o: any) => {
+                if (!o.items) return;
+                (Array.isArray(o.items) ? o.items : []).forEach((it: any) => ids.add(String(it.id || it.name)));
+              });
+              return ids.size;
+            })()}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

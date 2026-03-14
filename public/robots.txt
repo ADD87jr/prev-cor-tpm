@@ -1,0 +1,42 @@
+# robots.txt - PREV-COR TPM
+# https://www.prevcor.ro
+
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /checkout/
+Disallow: /cos/
+Disallow: /_next/
+Disallow: /login
+Disallow: /register
+
+# Googlebot specific
+User-agent: Googlebot
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Crawl-delay: 1
+
+# Bingbot specific
+User-agent: Bingbot
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Crawl-delay: 2
+
+# Block bad bots
+User-agent: AhrefsBot
+Disallow: /
+
+User-agent: MJ12bot
+Disallow: /
+
+User-agent: SemrushBot
+Disallow: /
+
+# Sitemap location
+Sitemap: https://www.prevcor.ro/sitemap.xml
+
+# Host (canonical)
+Host: https://www.prevcor.ro

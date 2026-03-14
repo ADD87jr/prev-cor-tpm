@@ -1,0 +1,11 @@
+﻿[dotenv@17.2.4] injecting env (21) from .env.local -- tip: ΓÜÖ∩╕Å  suppress all logs with { quiet: true }
+≡ƒôí Conectare la Turso: libsql://prevcortpm-add87jr.aws-eu-west-1.turso.io
+Γ£à Tabel creat: ConfiguratorBrand
+Γ£à Tabel creat: ConfiguratorProduct
+Γ£à Tabel creat: ConfiguratorCategory
+Γ£à Tabel creat: ConfiguratorOption
+Γ£à Tabel creat: ConfiguratorProductOption
+Γ£à Tabel creat: ConfiguratorCompatibility
+Γ£à Tabel creat: SavedConfiguration
+
+Γ£à Tabele create cu succes!
