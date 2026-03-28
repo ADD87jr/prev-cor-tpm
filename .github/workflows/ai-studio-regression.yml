@@ -36,7 +36,7 @@ jobs:
 
       - name: Ensure Rollup Linux binary
         if: runner.os == 'Linux'
-        run: npm install @rollup/rollup-linux-x64-gnu --no-save
+        run: npm install @rollup/rollup-linux-x64-gnu --no-save --legacy-peer-deps
 
       - name: Run AI Studio unit tests
         run: npm run test:ai-studio:unit
