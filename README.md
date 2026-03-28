@@ -90,3 +90,61 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## AI Studio Regression
+
+Comenzi rapide locale:
+
+```bash
+npm run test:ai-studio:unit
+npm run test:ai-studio:smoke
+npm run test:regression:quick
+```
+
+CI Workflow:
+
+- Workflow nou: `.github/workflows/ai-studio-regression.yml`
+- Ruleaza automat unit checks pe `push` si `pull_request`
+- Smoke test ruleaza manual (`workflow_dispatch`) cu input `run_smoke=true`
+
+Pentru smoke in CI sunt necesare secretele repository:
+
+- `TURSO_DATABASE_URL`
+- `TURSO_AUTH_TOKEN`
+
+### Branch Protection (manual)
+
+In acest workspace nu este configurat remote GitHub, deci branch protection nu poate fi aplicat automat din terminal.
+
+Setare recomandata in GitHub UI pentru `master`:
+
+1. Settings -> Branches -> Add branch protection rule
+2. Branch name pattern: `master`
+3. Bifeaza `Require a pull request before merging`
+4. Bifeaza `Require status checks to pass before merging`
+5. Selecteaza check-ul: `AI Studio Unit Checks`
+6. (Optional) Bifeaza `Require branches to be up to date before merging`
+
+### Branch Protection (automat, cand exista origin + gh)
+
+Script disponibil:
+
+```bash
+powershell -ExecutionPolicy Bypass -File scripts/setup-branch-protection.ps1 -Branch master
+```
+
+Conditii necesare:
+
+- remote `origin` configurat catre GitHub
+- `gh` instalat
+- autentificare: `gh auth login`
+- permisiuni admin pe repository
+
+### Clean Commit Workflow
+
+Pentru a face commit doar cu modificarile AI Studio (fara fisierele de backup):
+
+```bash
+powershell -ExecutionPolicy Bypass -File scripts/git-stage-ai-studio-regression.ps1
+git commit -m "feat(ai-studio): enforce portal sent-state rule and add regression checks"
+```
