@@ -148,3 +148,17 @@ Pentru a face commit doar cu modificarile AI Studio (fara fisierele de backup):
 powershell -ExecutionPolicy Bypass -File scripts/git-stage-ai-studio-regression.ps1
 git commit -m "feat(ai-studio): enforce portal sent-state rule and add regression checks"
 ```
+
+### Push + Protection intr-o singura comanda
+
+Daca repository-ul local nu are remote origin configurat, poti rula direct:
+
+```bash
+powershell -ExecutionPolicy Bypass -File scripts/push-and-protect.ps1 -RemoteUrl https://github.com/OWNER/REPO.git -Branch master
+```
+
+Scriptul:
+
+1. Configureaza origin (daca lipseste)
+2. Face push pe branch-ul dat
+3. Aplica branch protection automat (daca `gh` este instalat si autentificat)
