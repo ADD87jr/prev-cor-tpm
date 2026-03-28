@@ -11,6 +11,12 @@ function Ok([string]$m) { Write-Host "[OK] $m" -ForegroundColor Green }
 function Warn([string]$m) { Write-Host "[WARN] $m" -ForegroundColor Yellow }
 function Fail([string]$m) { Write-Host "[ERROR] $m" -ForegroundColor Red; exit 1 }
 
+function Assert-LastExit([string]$step) {
+  if ($LASTEXITCODE -ne 0) {
+    Fail "$step a esuat (exit code $LASTEXITCODE)."
+  }
+}
+
 if (-not $Branch) {
   $Branch = (git branch --show-current).Trim()
 }
@@ -31,6 +37,7 @@ if ([string]::IsNullOrWhiteSpace($origin)) {
   }
   Info "Configurez origin: $RemoteUrl"
   git remote add origin $RemoteUrl
+  Assert-LastExit 'Configurare origin'
   $origin = (git remote get-url origin).Trim()
   Ok "Origin configurat: $origin"
 } else {
@@ -39,6 +46,7 @@ if ([string]::IsNullOrWhiteSpace($origin)) {
 
 Info "Fac push pentru branch-ul $Branch"
 git push -u origin $Branch
+Assert-LastExit 'Push'
 Ok 'Push reusit.'
 
 $ghCmd = Get-Command gh -ErrorAction SilentlyContinue
@@ -48,9 +56,8 @@ if (-not $ghCmd) {
   exit 0
 }
 
-try {
-  gh auth status | Out-Null
-} catch {
+gh auth status | Out-Null
+if ($LASTEXITCODE -ne 0) {
   Warn 'gh nu este autentificat. Sar peste branch protection automat.'
   Warn 'Ruleaza: gh auth login'
   exit 0
@@ -58,4 +65,5 @@ try {
 
 Info 'Aplic branch protection automat.'
 powershell -ExecutionPolicy Bypass -File scripts/setup-branch-protection.ps1 -Branch $Branch -StatusCheckName $StatusCheckName
+Assert-LastExit 'Aplicare branch protection'
 Ok 'Flux complet: push + branch protection.'
