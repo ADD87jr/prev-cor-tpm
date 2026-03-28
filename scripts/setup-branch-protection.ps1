@@ -95,7 +95,8 @@ $apiPath = "repos/$owner/$repo/branches/$Branch/protection"
 $tmpFile = Join-Path $env:TEMP ("branch-protection-" + [guid]::NewGuid().ToString() + ".json")
 
 try {
-  Set-Content -Path $tmpFile -Value $payload -Encoding UTF8
+  $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+  [System.IO.File]::WriteAllText($tmpFile, $payload, $utf8NoBom)
   $null = gh api --method PUT --header "Accept: application/vnd.github+json" --header "X-GitHub-Api-Version: 2022-11-28" $apiPath --input $tmpFile
   Assert-LastExit 'Aplicare branch protection prin gh api'
   Success 'Branch protection aplicat cu succes.'
