@@ -32,15 +32,9 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm install --legacy-peer-deps --ignore-scripts
-
-      - name: Ensure Rollup Linux binary
-        if: runner.os == 'Linux'
-        run: npm install @rollup/rollup-linux-x64-gnu --no-save --legacy-peer-deps
-
-      - name: Ensure esbuild Linux binary
-        if: runner.os == 'Linux'
-        run: npm install @esbuild/linux-x64 --no-save --legacy-peer-deps
+        env:
+          PRISMA_SKIP_POSTINSTALL_GENERATE: 'true'
+        run: npm install --legacy-peer-deps
 
       - name: Run AI Studio unit tests
         run: npm run test:ai-studio:unit
