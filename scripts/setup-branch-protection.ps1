@@ -18,6 +18,12 @@ function Success([string]$Message) {
   Write-Host "[OK] $Message" -ForegroundColor Green
 }
 
+function Assert-LastExit([string]$step) {
+  if ($LASTEXITCODE -ne 0) {
+    Fail "$step a esuat (exit code $LASTEXITCODE)."
+  }
+}
+
 if (-not $Branch) {
   $Branch = (git branch --show-current).Trim()
 }
@@ -42,9 +48,8 @@ if (-not $ghCmd) {
   Fail 'GitHub CLI (gh) nu este instalat. Instaleaza gh si autentifica-te cu gh auth login.'
 }
 
-try {
-  gh auth status | Out-Null
-} catch {
+gh auth status | Out-Null
+if ($LASTEXITCODE -ne 0) {
   Fail 'gh nu este autentificat. Ruleaza gh auth login.'
 }
 
@@ -92,6 +97,7 @@ $tmpFile = Join-Path $env:TEMP ("branch-protection-" + [guid]::NewGuid().ToStrin
 try {
   Set-Content -Path $tmpFile -Value $payload -Encoding UTF8
   $null = gh api --method PUT --header "Accept: application/vnd.github+json" --header "X-GitHub-Api-Version: 2022-11-28" $apiPath --input $tmpFile
+  Assert-LastExit 'Aplicare branch protection prin gh api'
   Success 'Branch protection aplicat cu succes.'
   Success 'Reguli: PR obligatoriu, 1 review, status check AI Studio Unit Checks.'
 } catch {
