@@ -4,6 +4,7 @@ import { put } from '@vercel/blob';
 import { callGeminiWithFile, callOpenAIWithFile } from '../../../../lib/ai-provider';
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 function cleanEnv(v: string | undefined) {
   return (v || '').trim().replace(/^['"]|['"]$/g, '');
