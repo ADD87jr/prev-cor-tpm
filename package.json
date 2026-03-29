@@ -102,5 +102,8 @@
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.0.18"
+  },
+  "optionalDependencies": {
+    "@libsql/linux-x64-gnu": "0.5.22"
   }
 }
