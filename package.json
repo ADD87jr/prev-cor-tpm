@@ -105,6 +105,7 @@
   },
   "optionalDependencies": {
     "@libsql/linux-x64-gnu": "0.5.22",
+    "@tailwindcss/oxide-linux-x64-gnu": "4.1.18",
     "lightningcss-linux-x64-gnu": "1.30.2"
   }
 }
