@@ -104,6 +104,7 @@
     "vitest": "^4.0.18"
   },
   "optionalDependencies": {
-    "@libsql/linux-x64-gnu": "0.5.22"
+    "@libsql/linux-x64-gnu": "0.5.22",
+    "lightningcss-linux-x64-gnu": "1.30.2"
   }
 }
