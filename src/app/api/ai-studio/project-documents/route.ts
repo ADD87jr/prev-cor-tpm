@@ -10,10 +10,17 @@ function cleanEnv(v: string | undefined) {
   return (v || '').trim().replace(/^['"]|['"]$/g, '');
 }
 
-const turso = createClient({
-  url: cleanEnv(process.env.TURSO_DATABASE_URL),
-  authToken: cleanEnv(process.env.TURSO_AUTH_TOKEN),
-});
+let tursoClient: ReturnType<typeof createClient> | null = null;
+
+function getTurso() {
+  if (!tursoClient) {
+    tursoClient = createClient({
+      url: cleanEnv(process.env.TURSO_DATABASE_URL),
+      authToken: cleanEnv(process.env.TURSO_AUTH_TOKEN),
+    });
+  }
+  return tursoClient;
+}
 
 function getGeminiKey() {
   return (process.env.GEMINI_API_KEY || '').replace(/^["']|["']$/g, '');
@@ -24,6 +31,7 @@ function getOpenAIKey() {
 
 // Asigură coloana referenceDocuments în tabel
 async function ensureColumn() {
+  const turso = getTurso();
   try {
     await turso.execute(`ALTER TABLE AIStudioProjects ADD COLUMN referenceDocuments TEXT`);
   } catch { /* deja există */ }
@@ -71,6 +79,7 @@ Răspunde în format JSON:
 export async function POST(request: NextRequest) {
   try {
     await ensureColumn();
+    const turso = getTurso();
 
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
@@ -187,6 +196,7 @@ export async function POST(request: NextRequest) {
 // DELETE — șterge un document
 export async function DELETE(request: NextRequest) {
   try {
+    const turso = getTurso();
     const { projectId, docId } = await request.json() as { projectId: number; docId: string };
 
     const projRes = await turso.execute({

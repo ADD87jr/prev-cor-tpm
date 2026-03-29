@@ -5,13 +5,21 @@ import nodemailer from 'nodemailer';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const turso = createClient({
-  url: process.env.TURSO_DATABASE_URL || '',
-  authToken: process.env.TURSO_AUTH_TOKEN || '',
-});
+let tursoClient: ReturnType<typeof createClient> | null = null;
+
+function getTurso() {
+  if (!tursoClient) {
+    tursoClient = createClient({
+      url: process.env.TURSO_DATABASE_URL || '',
+      authToken: process.env.TURSO_AUTH_TOKEN || '',
+    });
+  }
+  return tursoClient;
+}
 
 // Creează tabelul dacă nu există
 async function ensureTable() {
+  const turso = getTurso();
   await turso.execute(`
     CREATE TABLE IF NOT EXISTS OfertaSolicitari (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -80,6 +88,7 @@ export async function POST(request: NextRequest) {
 
     // Asigură că tabelul există
     await ensureTable();
+    const turso = getTurso();
 
     // Salvează în baza de date
     const result = await turso.execute({
@@ -240,6 +249,7 @@ export async function PUT(request: NextRequest) {
     }
 
     await ensureTable();
+    const turso = getTurso();
 
     const existing = await turso.execute({
       sql: 'SELECT id, status, notes, technicalDraft FROM OfertaSolicitari WHERE id = ?',
@@ -294,6 +304,7 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status');
 
     await ensureTable();
+    const turso = getTurso();
 
     let sql = 'SELECT * FROM OfertaSolicitari ORDER BY createdAt DESC';
     const args: string[] = [];
