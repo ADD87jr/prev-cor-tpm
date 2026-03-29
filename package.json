@@ -20,7 +20,7 @@
     "seed": "node seed-products.js",
     "stop": "powershell -Command \"Get-Process | Where-Object { $_.ProcessName -like 'node' } | Stop-Process -Force\"",
     "postinstall": "npx prisma generate && node scripts/fix-pdfkit-helvetica.js",
-    "predev": "node scripts/sync-turso-schema.js --silent",
+    "predev": "node -e \"const fs=require('fs');const cp=require('child_process');if(fs.existsSync('scripts/sync-turso-schema.js')){cp.execSync('node scripts/sync-turso-schema.js --silent',{stdio:'inherit'})}else{console.log('[predev] skip: scripts/sync-turso-schema.js missing')}\"",
     "webhook": "node stripe-webhook-server.js",
     "db:backup": "node scripts/backup-database.js",
     "db:restore": "node scripts/restore-database.js && node scripts/sync-suppliers.js",
@@ -32,7 +32,7 @@
     "db:sync-suppliers:to-local": "node scripts/sync-suppliers.js --to-local",
     "db:sync-suppliers:to-turso": "node scripts/sync-suppliers.js --to-turso",
     "db:import-products": "node scripts/import-products-excel.js",
-    "prebuild": "node scripts/sync-turso-schema.js && node scripts/backup-turso-alert.js"
+    "prebuild": "node -e \"const fs=require('fs');const cp=require('child_process');const run=(cmd,label)=>{if(fs.existsSync(label)){cp.execSync(cmd,{stdio:'inherit'})}else{console.log('[prebuild] skip: '+label+' missing')}};run('node scripts/sync-turso-schema.js','scripts/sync-turso-schema.js');run('node scripts/backup-turso-alert.js','scripts/backup-turso-alert.js');\""
   },
   "dependencies": {
     "@libsql/client": "^0.17.0",
