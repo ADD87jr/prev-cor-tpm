@@ -19,8 +19,8 @@
     "test:e2e:headed": "playwright test --headed",
     "seed": "node seed-products.js",
     "stop": "powershell -Command \"Get-Process | Where-Object { $_.ProcessName -like 'node' } | Stop-Process -Force\"",
-    "postinstall": "npx prisma generate && node scripts/fix-pdfkit-helvetica.js",
-    "predev": "node scripts/sync-turso-schema.js --silent",
+    "postinstall": "node -e \"const fs=require('fs');const cp=require('child_process');if(fs.existsSync('prisma/schema.prisma')){cp.execSync('npx prisma generate',{stdio:'inherit'})}else{console.log('[postinstall] skip: prisma/schema.prisma missing')}if(fs.existsSync('scripts/fix-pdfkit-helvetica.js')){cp.execSync('node scripts/fix-pdfkit-helvetica.js',{stdio:'inherit'})}else{console.log('[postinstall] skip: scripts/fix-pdfkit-helvetica.js missing')}\"",
+    "predev": "node -e \"const fs=require('fs');const cp=require('child_process');if(fs.existsSync('scripts/sync-turso-schema.js')){cp.execSync('node scripts/sync-turso-schema.js --silent',{stdio:'inherit'})}else{console.log('[predev] skip: scripts/sync-turso-schema.js missing')}\"",
     "webhook": "node stripe-webhook-server.js",
     "db:backup": "node scripts/backup-database.js",
     "db:restore": "node scripts/restore-database.js && node scripts/sync-suppliers.js",
@@ -32,14 +32,12 @@
     "db:sync-suppliers:to-local": "node scripts/sync-suppliers.js --to-local",
     "db:sync-suppliers:to-turso": "node scripts/sync-suppliers.js --to-turso",
     "db:import-products": "node scripts/import-products-excel.js",
-    "prebuild": "node scripts/sync-turso-schema.js && node scripts/backup-turso-alert.js"
+    "prebuild": "node -e \"const fs=require('fs');const cp=require('child_process');const run=(cmd,label)=>{if(fs.existsSync(label)){cp.execSync(cmd,{stdio:'inherit'})}else{console.log('[prebuild] skip: '+label+' missing')}};run('node scripts/sync-turso-schema.js','scripts/sync-turso-schema.js');run('node scripts/backup-turso-alert.js','scripts/backup-turso-alert.js');\""
   },
   "dependencies": {
     "@libsql/client": "^0.17.0",
     "@prisma/adapter-libsql": "^6.19.0",
     "@prisma/client": "^6.19.2",
-    "@react-three/drei": "^10.7.6",
-    "@react-three/fiber": "^9.3.0",
     "@sentry/nextjs": "^10.38.0",
     "@stripe/react-stripe-js": "^5.0.0",
     "@stripe/stripe-js": "^8.0.0",
@@ -70,7 +68,6 @@
     "resend": "^6.9.2",
     "speakeasy": "^2.0.0",
     "stripe": "^19.3.1",
-    "three": "^0.180.0",
     "unpdf": "^1.4.0",
     "web-push": "^3.6.7",
     "web-vitals": "^5.1.0",
@@ -105,5 +102,10 @@
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.0.18"
+  },
+  "optionalDependencies": {
+    "@libsql/linux-x64-gnu": "0.5.22",
+    "@tailwindcss/oxide-linux-x64-gnu": "4.1.18",
+    "lightningcss-linux-x64-gnu": "1.30.2"
   }
 }

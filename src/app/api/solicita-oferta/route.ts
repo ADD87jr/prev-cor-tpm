@@ -2,13 +2,24 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@libsql/client';
 import nodemailer from 'nodemailer';
 
-const turso = createClient({
-  url: process.env.TURSO_DATABASE_URL || '',
-  authToken: process.env.TURSO_AUTH_TOKEN || '',
-});
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+let tursoClient: ReturnType<typeof createClient> | null = null;
+
+function getTurso() {
+  if (!tursoClient) {
+    tursoClient = createClient({
+      url: process.env.TURSO_DATABASE_URL || '',
+      authToken: process.env.TURSO_AUTH_TOKEN || '',
+    });
+  }
+  return tursoClient;
+}
 
 // Creează tabelul dacă nu există
 async function ensureTable() {
+  const turso = getTurso();
   await turso.execute(`
     CREATE TABLE IF NOT EXISTS OfertaSolicitari (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -23,6 +34,7 @@ async function ensureTable() {
       budgetCustom TEXT,
       specificationFileName TEXT,
       attachments TEXT,
+      technicalDraft TEXT,
       status TEXT DEFAULT 'new',
       notes TEXT,
       assignedProjectId INTEGER,
@@ -43,6 +55,9 @@ async function ensureTable() {
   } catch { /* coloana există deja */ }
   try {
     await turso.execute(`ALTER TABLE OfertaSolicitari ADD COLUMN capacityPerformance TEXT`);
+  } catch { /* coloana există deja */ }
+  try {
+    await turso.execute(`ALTER TABLE OfertaSolicitari ADD COLUMN technicalDraft TEXT`);
   } catch { /* coloana există deja */ }
 }
 
@@ -73,12 +88,13 @@ export async function POST(request: NextRequest) {
 
     // Asigură că tabelul există
     await ensureTable();
+    const turso = getTurso();
 
     // Salvează în baza de date
     const result = await turso.execute({
       sql: `INSERT INTO OfertaSolicitari 
-            (companyName, contactPerson, email, phone, projectDescription, capacityPerformance, deadline, budgetRange, budgetCustom, specificationFileName, attachments) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        (companyName, contactPerson, email, phone, projectDescription, capacityPerformance, deadline, budgetRange, budgetCustom, specificationFileName, attachments, technicalDraft) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       args: [
         companyName, 
         contactPerson, 
@@ -90,7 +106,8 @@ export async function POST(request: NextRequest) {
         budgetRange || '',
         budgetCustom || '',
         specificationFileName || '',
-        attachments ? JSON.stringify(attachments) : ''
+        attachments ? JSON.stringify(attachments) : '',
+        ''
       ],
     });
 
@@ -218,6 +235,68 @@ export async function POST(request: NextRequest) {
   }
 }
 
+// PUT - actualizare draft tehnic intern (admin)
+export async function PUT(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const id = Number(body?.id);
+
+    if (!Number.isFinite(id) || id <= 0) {
+      return NextResponse.json(
+        { success: false, error: 'ID solicitare invalid' },
+        { status: 400 }
+      );
+    }
+
+    await ensureTable();
+    const turso = getTurso();
+
+    const existing = await turso.execute({
+      sql: 'SELECT id, status, notes, technicalDraft FROM OfertaSolicitari WHERE id = ?',
+      args: [String(id)],
+    });
+
+    const row = existing.rows?.[0] as Record<string, unknown> | undefined;
+    if (!row) {
+      return NextResponse.json(
+        { success: false, error: 'Solicitarea nu a fost găsită' },
+        { status: 404 }
+      );
+    }
+
+    const nextStatus = typeof body?.status === 'string' ? body.status : String(row.status || 'new');
+    const nextNotes = typeof body?.notes === 'string' ? body.notes : String(row.notes || '');
+
+    let nextTechnicalDraft = String(row.technicalDraft || '');
+    if (body?.technicalDraft !== undefined) {
+      if (typeof body.technicalDraft === 'string') {
+        nextTechnicalDraft = body.technicalDraft;
+      } else {
+        nextTechnicalDraft = JSON.stringify(body.technicalDraft);
+      }
+    }
+
+    await turso.execute({
+      sql: `UPDATE OfertaSolicitari
+            SET status = ?, notes = ?, technicalDraft = ?, updatedAt = CURRENT_TIMESTAMP
+            WHERE id = ?`,
+      args: [nextStatus, nextNotes, nextTechnicalDraft, String(id)],
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: 'Draftul tehnic a fost salvat',
+      id,
+    });
+  } catch (error) {
+    console.error('Update solicitare error:', error);
+    return NextResponse.json(
+      { success: false, error: 'Eroare la actualizarea solicitării' },
+      { status: 500 }
+    );
+  }
+}
+
 // GET - listare solicitări (pentru admin)
 export async function GET(request: NextRequest) {
   try {
@@ -225,6 +304,7 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status');
 
     await ensureTable();
+    const turso = getTurso();
 
     let sql = 'SELECT * FROM OfertaSolicitari ORDER BY createdAt DESC';
     const args: string[] = [];

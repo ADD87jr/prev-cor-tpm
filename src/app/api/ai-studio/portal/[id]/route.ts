@@ -2,12 +2,22 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@libsql/client';
 import { isPortalFeedbackAllowed } from '@/lib/ai-studio/portalRules';
 
-const turso = createClient({
-  url: process.env.TURSO_DATABASE_URL || '',
-  authToken: process.env.TURSO_AUTH_TOKEN || '',
-});
+export const dynamic = 'force-dynamic';
+
+let tursoClient: ReturnType<typeof createClient> | null = null;
+
+function getTurso() {
+  if (!tursoClient) {
+    tursoClient = createClient({
+      url: process.env.TURSO_DATABASE_URL || '',
+      authToken: process.env.TURSO_AUTH_TOKEN || '',
+    });
+  }
+  return tursoClient;
+}
 
 async function ensureFeedbackTable() {
+  const turso = getTurso();
   await turso.execute(`
     CREATE TABLE IF NOT EXISTS ClientFeedback (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -22,6 +32,7 @@ async function ensureFeedbackTable() {
 }
 
 async function loadAiStudioByIdOrToken(idOrToken: string) {
+  const turso = getTurso();
   const byId = await turso.execute({
     sql: `SELECT id, name, client, description, status, currentPhase, createdAt, updatedAt, requirements, technicalProposal,
                  offerNumber, offerStatus, offerVersion, shareToken
@@ -62,6 +73,7 @@ export async function GET(
     };
 
     await ensureFeedbackTable();
+    const turso = getTurso();
     const feedbackRes = await turso.execute({
       sql: 'SELECT id, clientName, feedbackType, message, createdAt FROM ClientFeedback WHERE projectId = ? ORDER BY createdAt DESC LIMIT 30',
       args: [projectId],
@@ -87,6 +99,7 @@ export async function GET(
     });
   }
 
+  const turso = getTurso();
   const result = await turso.execute({
     sql: 'SELECT rowid as id, * FROM AutomationProjects WHERE rowid = ?',
     args: [id],
@@ -154,6 +167,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const turso = getTurso();
     const { id } = await params;
     const payload = await request.json() as { action?: string; clientName?: string; message?: string };
     const action = String(payload.action || 'comment');
